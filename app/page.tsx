@@ -16,7 +16,7 @@ export default function Page() {
         />
       </svg>
       <p className="absolute left-1/2 top-[calc(50%+56px)] -translate-x-1/2 whitespace-nowrap text-sm font-medium text-muted-foreground">
-        Your v0 generation will show here.
+        Welcome to Knowlix. Your content will appear here.
       </p>
     </main>
   )
