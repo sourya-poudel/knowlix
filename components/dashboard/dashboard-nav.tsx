@@ -51,10 +51,6 @@ export function DashboardNav({
           <Button variant="ghost" size="icon" aria-label="Search" className="hidden sm:inline-flex">
             <Search className="size-4" />
           </Button>
-          <Button size="sm" className="hidden sm:inline-flex">
-            <Upload className="size-4" />
-            Upload
-          </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -79,10 +75,6 @@ export function DashboardNav({
               <DropdownMenuItem>
                 <User className="size-4" />
                 Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem className="sm:hidden">
-                <Upload className="size-4" />
-                Upload
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} variant="destructive">

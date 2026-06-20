@@ -8,18 +8,14 @@ export async function createResource(data: any) {
 }
 
 export async function toggleBookmark(resourceId: string, isBookmarked: boolean) {
-  if (isBookmarked) {
-    const res = await fetch('/api/bookmarks', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ resourceId }),
-    })
-    return res.json()
-  }
+  const method = isBookmarked ? 'DELETE' : 'POST'
   const res = await fetch('/api/bookmarks', {
-    method: 'POST',
+    method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ resourceId }),
   })
-  return res.json()
+
+  const data = await res.json()
+  if (!res.ok) throw new Error(data?.error || 'Bookmark request failed')
+  return data
 }

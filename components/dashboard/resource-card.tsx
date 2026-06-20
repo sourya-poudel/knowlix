@@ -34,7 +34,7 @@ export function ResourceCard({
   resource: MockResource
   showStatus?: boolean
 }) {
-  const [bookmarked, setBookmarked] = useState(false)
+  const [bookmarked, setBookmarked] = useState(resource.bookmarked ?? false)
 
   async function handleToggleBookmark() {
     try {
@@ -47,7 +47,7 @@ export function ResourceCard({
   }
 
   return (
-    <Card className="flex flex-col gap-4 p-5 transition-colors hover:border-primary/40">
+    <Card className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg">
       <div className="flex items-start justify-between gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
           <FileText className="size-5" aria-hidden="true" />

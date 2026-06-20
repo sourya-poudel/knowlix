@@ -20,6 +20,7 @@ export type MockResource = {
   viewCount: number
   status: 'approved' | 'pending' | 'rejected'
   createdAt: string
+  bookmarked?: boolean
 }
 
 export const CURRENT_USER = {

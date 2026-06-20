@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { resource as resourceTable } from '@/lib/db/schema'
@@ -37,6 +38,6 @@ export async function GET(req: Request) {
   const userId = url.searchParams.get('userId')
   if (!userId) return new Response(JSON.stringify({ error: 'userId required' }), { status: 400 })
 
-  const rows = await db.select().from(resourceTable).where(resourceTable.userId.eq(userId))
+  const rows = await db.select().from(resourceTable).where(eq(resourceTable.userId, userId))
   return new Response(JSON.stringify(rows), { status: 200 })
 }

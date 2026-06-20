@@ -26,6 +26,12 @@ export const INSTITUTIONS: Institution[] = [
     slug: 'ankuram-academy',
     domain: 'student.ankuram.edu.np',
   },
+  {
+    id: 'inst_divya',
+    name: 'Divya Academy',
+    slug: 'divya-academy',
+    domain: 'student.divya.edu.np',
+  },
 ]
 
 export function getInstitution(id: string): Institution | undefined {
