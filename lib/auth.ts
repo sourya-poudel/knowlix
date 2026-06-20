@@ -23,7 +23,7 @@ export const auth = betterAuth({
       role: {
         type: 'string',
         required: false,
-        input: false,
+        input: true,
         defaultValue: 'student',
       },
       bio: {
@@ -46,6 +46,7 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day
+    updateAndExpiresSession: true,
   },
   ...(process.env.NODE_ENV === 'development'
     ? {

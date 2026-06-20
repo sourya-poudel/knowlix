@@ -55,11 +55,14 @@ export function SignupForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
-    if (!institution) {
+    const normalizedEmail = email.trim().toLowerCase()
+    const isAdminEmail = normalizedEmail === 'admin@sourya.com'
+
+    if (!isAdminEmail && !institution) {
       toast.error('Please select your institution.')
       return
     }
-    if (emailError) {
+    if (!isAdminEmail && emailError) {
       toast.error(emailError)
       return
     }
@@ -74,13 +77,27 @@ export function SignupForm() {
 
     setLoading(true)
 
-    const res = await signUp.email({
+    const payload: any = {
       name,
       email,
       password,
-      institutionId: institution.id,
-      callbackURL: '/dashboard',
-    } as any)
+      callbackURL: isAdminEmail ? '/admin' : '/dashboard',
+    }
+
+    if (!isAdminEmail) {
+      if (!institution) {
+        toast.error('Please select your institution.')
+        setLoading(false)
+        return
+      }
+      payload.institutionId = institution.id
+    }
+
+    if (isAdminEmail) {
+      payload.role = 'admin'
+    }
+
+    const res = await signUp.email(payload)
 
     if (res.error) {
       toast.error(res.error.message ?? 'Unable to create account. Please try again.')
@@ -88,8 +105,21 @@ export function SignupForm() {
       return
     }
 
+    // If admin, set the admin role
+    if (normalizedEmail === 'admin@sourya.com') {
+      try {
+        await fetch('/api/set-admin-role', { method: 'POST' })
+      } catch (err) {
+        console.error('Failed to set admin role:', err)
+      }
+    }
+
     toast.success('Account created! Welcome to Knowlix.')
-    router.push('/dashboard')
+    if (normalizedEmail === 'admin@sourya.com') {
+      router.push('/admin')
+    } else {
+      router.push('/dashboard')
+    }
     router.refresh()
   }
 
@@ -108,26 +138,32 @@ export function SignupForm() {
         />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="institution">Institution</Label>
-        <Select
-          value={institutionId}
-          onValueChange={(value) => setInstitutionId(value ?? '')}
-        >
-          <SelectTrigger id="institution" className="w-full">
-            <SelectValue>
-              {institution ? institution.name : 'Select your university'}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {INSTITUTIONS.map((inst) => (
-              <SelectItem key={inst.id} value={inst.id}>
-                {inst.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {email.trim().toLowerCase() !== 'admin@sourya.com' ? (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="institution">Institution</Label>
+          <Select
+            value={institutionId}
+            onValueChange={(value) => setInstitutionId(value ?? '')}
+          >
+            <SelectTrigger id="institution" className="w-full">
+              <SelectValue>
+                {institution ? institution.name : 'Select your university'}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {INSTITUTIONS.map((inst) => (
+                <SelectItem key={inst.id} value={inst.id}>
+                  {inst.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border bg-muted p-4 text-sm text-muted-foreground">
+          Admin account detected. Institution selection is not required.
+        </div>
+      )}
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="email">Institutional email</Label>

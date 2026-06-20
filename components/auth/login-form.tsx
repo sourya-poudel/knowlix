@@ -20,10 +20,13 @@ export function LoginForm() {
     e.preventDefault()
     setLoading(true)
 
+    const normalizedEmail = email.trim().toLowerCase()
+    const callbackURL = normalizedEmail === 'admin@sourya.com' ? '/admin' : '/dashboard'
+
     const res = await signIn.email({
       email,
       password,
-      callbackURL: '/dashboard',
+      callbackURL,
     } as any)
 
     if (res.error) {
@@ -32,8 +35,17 @@ export function LoginForm() {
       return
     }
 
+    // If admin, ensure admin role is set
+    if (normalizedEmail === 'admin@sourya.com') {
+      try {
+        await fetch('/api/set-admin-role', { method: 'POST' })
+      } catch (err) {
+        console.error('Failed to set admin role:', err)
+      }
+    }
+
     toast.success('Welcome back!')
-    router.push('/dashboard')
+    router.push(callbackURL)
     router.refresh()
   }
 
