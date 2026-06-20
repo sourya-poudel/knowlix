@@ -1,15 +1,14 @@
 import { Upload, Bookmark, Download, ThumbsUp } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
-import { DASHBOARD_STATS } from '@/lib/mock-data'
 
 const STATS = [
-  { key: 'uploads', label: 'My uploads', value: DASHBOARD_STATS.uploads, icon: Upload },
-  { key: 'saved', label: 'Saved', value: DASHBOARD_STATS.saved, icon: Bookmark },
-  { key: 'downloads', label: 'Downloads', value: DASHBOARD_STATS.downloads, icon: Download },
-  { key: 'upvotes', label: 'Upvotes earned', value: DASHBOARD_STATS.upvotes, icon: ThumbsUp },
+  { key: 'uploads', label: 'My uploads', icon: Upload },
+  { key: 'saved', label: 'Saved', icon: Bookmark },
+  { key: 'downloads', label: 'Downloads', icon: Download },
+  { key: 'upvotes', label: 'Upvotes earned', icon: ThumbsUp },
 ] as const
 
-export function StatCards() {
+export function StatCards({ stats }: { stats: { uploads: number; saved: number; downloads: number; upvotes: number } }) {
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {STATS.map((stat) => (
@@ -20,7 +19,7 @@ export function StatCards() {
             </span>
             <div className="flex flex-col">
               <span className="text-2xl font-semibold tracking-tight text-card-foreground">
-                {stat.value.toLocaleString()}
+                {stats[stat.key].toLocaleString()}
               </span>
               <span className="text-sm text-muted-foreground">{stat.label}</span>
             </div>

@@ -22,7 +22,7 @@ export async function getCurrentUser(): Promise<AppUser | null> {
 /** Requires an authenticated user. Redirects to sign-in otherwise. */
 export async function requireUser(): Promise<AppUser> {
   const u = await getCurrentUser()
-  if (!u) redirect('/sign-in')
+  if (!u) redirect('/login')
   return u
 }
 
