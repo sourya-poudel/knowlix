@@ -1,8 +1,13 @@
-import { Download, Eye, ThumbsUp, FileText } from 'lucide-react'
+"use client"
+
+import { useState } from 'react'
+import { Download, Eye, ThumbsUp, FileText, Bookmark } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { resourceTypeLabel, formatFileSize, timeAgo } from '@/lib/constants'
 import type { MockResource } from '@/lib/mock-data'
+import { toggleBookmark } from '@/lib/resources'
+import { toast } from 'sonner'
 
 function StatusBadge({ status }: { status: MockResource['status'] }) {
   if (status === 'approved') {
@@ -29,6 +34,18 @@ export function ResourceCard({
   resource: MockResource
   showStatus?: boolean
 }) {
+  const [bookmarked, setBookmarked] = useState(false)
+
+  async function handleToggleBookmark() {
+    try {
+      await toggleBookmark(resource.id, bookmarked)
+      setBookmarked(!bookmarked)
+      toast.success(bookmarked ? 'Removed bookmark' : 'Bookmarked')
+    } catch (err) {
+      toast.error('Unable to update bookmark')
+    }
+  }
+
   return (
     <Card className="flex flex-col gap-4 p-5 transition-colors hover:border-primary/40">
       <div className="flex items-start justify-between gap-3">
@@ -38,6 +55,14 @@ export function ResourceCard({
         <div className="flex items-center gap-2">
           <Badge variant="outline">{resourceTypeLabel(resource.type)}</Badge>
           {showStatus && <StatusBadge status={resource.status} />}
+          <button
+            type="button"
+            aria-label="Toggle bookmark"
+            onClick={handleToggleBookmark}
+            className="ml-2"
+          >
+            <Bookmark className={`size-4 ${bookmarked ? 'text-primary' : 'text-muted-foreground'}`} />
+          </button>
         </div>
       </div>
 
