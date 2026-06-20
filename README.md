@@ -1,4 +1,4 @@
-# 🎓 Knowlix
+# Knowlix
 
 ### Preserving Knowledge Across Generations of Students
 
@@ -146,8 +146,8 @@ Reward meaningful contributions through:
 | Authentication | Better Auth                  |
 | Database       | PostgreSQL (Neon)            |
 | ORM            | Drizzle ORM                  |
-| File Storage   | Vercel Blob                  |
-| Deployment     | Vercel                       |
+| File Storage   | Cloud object storage         |
+| Deployment     | Platform-agnostic production deployment |
 
 ---
 

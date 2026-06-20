@@ -1,4 +1,5 @@
 import { createAuthClient } from 'better-auth/react'
+import { auth } from '@/lib/auth'
 
 export const authClient = createAuthClient()
 
