@@ -12,7 +12,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -70,10 +69,12 @@ export function DashboardNav({
               }
             />
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="flex flex-col gap-0.5">
-                <span className="text-sm font-medium text-foreground">{name}</span>
-                <span className="text-xs font-normal text-muted-foreground">{email}</span>
-              </DropdownMenuLabel>
+              <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium text-foreground">{name}</span>
+                  <span className="text-xs font-normal text-muted-foreground">{email}</span>
+                </div>
+              </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem>
                 <User className="size-4" />
