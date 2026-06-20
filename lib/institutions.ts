@@ -15,7 +15,7 @@ export type Institution = {
   id: string
   name: string
   slug: string
-  /** Email domain students must use to verify membership, e.g. "ankuram.edu" */
+  /** Email domain students must use to verify membership, e.g. "student.ankuram.edu.np" */
   domain: string
 }
 

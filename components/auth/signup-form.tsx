@@ -115,7 +115,9 @@ export function SignupForm() {
           onValueChange={(value) => setInstitutionId(value ?? '')}
         >
           <SelectTrigger id="institution" className="w-full">
-            <SelectValue placeholder="Select your university" />
+            <SelectValue>
+              {institution ? institution.name : 'Select your university'}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {INSTITUTIONS.map((inst) => (

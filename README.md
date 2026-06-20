@@ -148,6 +148,8 @@ Reward meaningful contributions through:
 | ORM            | Drizzle ORM                  |
 | File Storage   | Cloud object storage         |
 | Deployment     | Platform-agnostic production deployment |
+| Environment    | `.env.example` for local setup |
+| Database       | `neon-schema.sql` for Neon Postgres |
 
 ---
 
