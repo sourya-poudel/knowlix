@@ -1,8 +1,9 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { notification } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, inArray, desc, and } from 'drizzle-orm'
 import { headers } from 'next/headers'
+import { getRequestUser } from '@/lib/session'
 
 export async function GET(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -12,9 +13,12 @@ export async function GET(req: Request) {
     .select()
     .from(notification)
     .where(eq(notification.userId, session.user.id))
-    .orderBy(notification.createdAt)
+    .orderBy(desc(notification.createdAt))
 
-  return new Response(JSON.stringify(rows), { status: 200 })
+  return new Response(
+    JSON.stringify(rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() }))),
+    { status: 200 },
+  )
 }
 
 export async function POST(req: Request) {
@@ -43,4 +47,26 @@ export async function POST(req: Request) {
   })
 
   return new Response(JSON.stringify({ success: true }), { status: 201 })
+}
+
+export async function PATCH(req: Request) {
+  const user = await getRequestUser(req.headers)
+  if (!user) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+
+  const body = await req.json().catch(() => ({}))
+  const ids = Array.isArray(body.ids) ? body.ids.map(String) : null
+
+  if (ids && ids.length > 0) {
+    await db
+      .update(notification)
+      .set({ isRead: true })
+      .where(and(eq(notification.userId, user.id), inArray(notification.id, ids)))
+  } else {
+    await db
+      .update(notification)
+      .set({ isRead: true })
+      .where(eq(notification.userId, user.id))
+  }
+
+  return new Response(JSON.stringify({ success: true }), { status: 200 })
 }

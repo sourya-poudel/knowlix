@@ -1,13 +1,13 @@
-import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRight, ShieldCheck, Star } from 'lucide-react'
+import { ArrowRight, BarChart3, BookOpen, ShieldCheck, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 
 export function Hero() {
   return (
     <section className="relative isolate overflow-hidden">
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_color-mix(in_oklch,var(--primary)_18%,transparent),_transparent_34%),radial-gradient(circle_at_85%_12%,_color-mix(in_oklch,var(--accent)_18%,transparent),_transparent_30%)]" />
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 md:py-24 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_color-mix(in_oklch,var(--primary)_12%,transparent),_transparent_36%),radial-gradient(circle_at_85%_12%,_color-mix(in_oklch,var(--accent)_12%,transparent),_transparent_32%)]" />
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 md:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
         <div className="flex flex-col gap-7">
           <span className="inline-flex w-fit items-center gap-2 rounded-full border border-border/80 bg-background/70 px-4 py-2 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-sm">
             <ShieldCheck className="size-3.5 text-primary" />
@@ -19,10 +19,10 @@ export function Hero() {
               Academic resources, preserved
             </p>
             <h1 className="max-w-3xl text-balance text-4xl font-semibold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-              A polished home for the knowledge your campus keeps creating
+              A professional library for your campus knowledge
             </h1>
             <p className="max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground">
-              Knowlix helps students share notes, past questions, and study guides inside a verified institution network. Upload once, approve responsibly, and keep the best work alive for the next batch.
+              Knowlix helps students and moderators organize notes, past questions, and study guides inside a verified institution network. The result is a clean, trusted archive built for serious academic use.
             </p>
           </div>
 
@@ -44,7 +44,7 @@ export function Hero() {
             ].map(([value, label]) => (
               <div
                 key={label}
-                className="rounded-2xl border border-border/70 bg-background/75 p-4 shadow-sm backdrop-blur-sm"
+                className="rounded-2xl border border-border/70 bg-background/80 p-4 shadow-sm backdrop-blur-sm"
               >
                 <div className="text-2xl font-semibold tracking-tight text-foreground">{value}</div>
                 <div className="mt-1 text-sm text-muted-foreground">{label}</div>
@@ -63,33 +63,49 @@ export function Hero() {
         </div>
 
         <div className="relative">
-          <div className="absolute inset-0 translate-x-10 translate-y-10 rounded-[2.5rem] bg-primary/15 blur-3xl" />
-          <div className="relative overflow-hidden rounded-[2rem] border border-border/80 bg-card/75 p-3 shadow-[0_40px_120px_-60px_rgba(15,23,42,0.45)] backdrop-blur">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-[1.5rem] bg-muted">
-              <Image
-                src="/images/hero-students.png"
-                alt="University students collaborating over study notes in a library"
-                fill
-                priority
-                className="object-cover"
-                sizes="(max-width: 1024px) 100vw, 50vw"
-              />
-            </div>
+          <div className="absolute inset-0 translate-x-10 translate-y-10 rounded-[2.5rem] bg-primary/10 blur-3xl" />
+          <Card className="relative overflow-hidden rounded-[2rem] border-border/80 bg-card/85 p-5 shadow-[0_40px_120px_-60px_rgba(15,23,42,0.45)] backdrop-blur">
+            <div className="grid gap-4">
+              <div className="rounded-[1.5rem] border border-border/70 bg-background/80 p-4 shadow-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                      Campus overview
+                    </p>
+                    <p className="mt-1 text-lg font-semibold text-foreground">Shared knowledge, organized</p>
+                  </div>
+                  <BarChart3 className="size-5 text-primary" aria-hidden="true" />
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+                  <div className="rounded-2xl bg-muted/70 p-3">
+                    <div className="font-semibold text-foreground">128</div>
+                    <div className="text-muted-foreground">Uploads</div>
+                  </div>
+                  <div className="rounded-2xl bg-muted/70 p-3">
+                    <div className="font-semibold text-foreground">4.8/5</div>
+                    <div className="text-muted-foreground">Avg rating</div>
+                  </div>
+                  <div className="rounded-2xl bg-muted/70 p-3">
+                    <div className="font-semibold text-foreground">92%</div>
+                    <div className="text-muted-foreground">Approved</div>
+                  </div>
+                </div>
+              </div>
 
-            <div className="absolute left-5 top-5 rounded-2xl border border-border/70 bg-background/90 px-4 py-3 shadow-lg backdrop-blur-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-                Pending review
-              </p>
-              <p className="mt-1 text-sm font-medium text-foreground">Moderator-approved workflow</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-[1.5rem] border border-border/70 bg-background/80 p-4 shadow-sm">
+                  <BookOpen className="size-5 text-primary" aria-hidden="true" />
+                  <p className="mt-3 text-sm font-semibold text-foreground">Curated study sets</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Collections for board prep, exam revision, and shared notes.</p>
+                </div>
+                <div className="rounded-[1.5rem] border border-border/70 bg-background/80 p-4 shadow-sm">
+                  <ShieldCheck className="size-5 text-primary" aria-hidden="true" />
+                  <p className="mt-3 text-sm font-semibold text-foreground">Moderator review</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Reliable approvals keep the archive useful and credible.</p>
+                </div>
+              </div>
             </div>
-
-            <div className="absolute bottom-5 right-5 rounded-2xl border border-border/70 bg-background/90 px-4 py-3 shadow-lg backdrop-blur-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-                Discovery
-              </p>
-              <p className="mt-1 text-sm font-medium text-foreground">Searchable by course, batch, and type</p>
-            </div>
-          </div>
+          </Card>
         </div>
       </div>
     </section>

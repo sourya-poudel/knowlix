@@ -14,6 +14,7 @@ export type MockResource = {
   courseCode: string
   courseName: string
   uploaderName: string
+  userId?: string
   fileUrl?: string
   fileName?: string
   fileSize: number
@@ -21,6 +22,8 @@ export type MockResource = {
   upvoteCount: number
   downloadCount: number
   viewCount: number
+  ratingAvg?: number
+  ratingCount?: number
   status: 'approved' | 'pending' | 'rejected'
   createdAt: string
   bookmarked?: boolean

@@ -31,11 +31,11 @@ export const REPORT_REASONS = [
 ] as const
 
 export function reputationTier(reputation: number) {
-  if (reputation >= 5000) return { label: 'Luminary', color: 'text-chart-5' }
-  if (reputation >= 2000) return { label: 'Scholar', color: 'text-chart-1' }
-  if (reputation >= 1000) return { label: 'Contributor', color: 'text-chart-3' }
-  if (reputation >= 250) return { label: 'Rising', color: 'text-chart-2' }
-  return { label: 'Newcomer', color: 'text-muted-foreground' }
+  if (reputation >= 5000) return { label: 'Mentor', color: 'text-chart-5', level: 5 }
+  if (reputation >= 1500) return { label: 'Scholar', color: 'text-chart-1', level: 4 }
+  if (reputation >= 500) return { label: 'Trusted Contributor', color: 'text-chart-3', level: 3 }
+  if (reputation >= 100) return { label: 'Contributor', color: 'text-chart-2', level: 2 }
+  return { label: 'New Contributor', color: 'text-muted-foreground', level: 1 }
 }
 
 export function formatFileSize(bytes: number | null | undefined) {

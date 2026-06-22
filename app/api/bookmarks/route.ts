@@ -1,34 +1,67 @@
-import { and, eq } from 'drizzle-orm/sql'
-import { auth } from '@/lib/auth'
+import { and, eq } from 'drizzle-orm'
+import { getRequestUser } from '@/lib/session'
 import { db } from '@/lib/db'
-import { bookmark as bookmarkTable } from '@/lib/db/schema'
+import { bookmark as bookmarkTable, resource as resourceTable } from '@/lib/db/schema'
+import { createNotification } from '@/lib/notifications'
 
 export async function POST(req: Request) {
-  const session = await auth.api.getSession({ headers: req.headers })
-  if (!session?.user) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+  const user = await getRequestUser(req.headers)
+  if (!user) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
-  const body = await req.json()
+  const body = await req.json().catch(() => ({}))
+  const resourceId = String(body.resourceId ?? '')
+  if (!resourceId) {
+    return new Response(JSON.stringify({ error: 'resourceId is required' }), { status: 400 })
+  }
+
+  const existing = await db
+    .select({ id: bookmarkTable.id })
+    .from(bookmarkTable)
+    .where(and(eq(bookmarkTable.resourceId, resourceId), eq(bookmarkTable.userId, user.id)))
+    .limit(1)
+
+  if (existing[0]) {
+    return new Response(JSON.stringify({ success: true, id: existing[0].id }), { status: 200 })
+  }
+
+  const resourceRows = await db.select().from(resourceTable).where(eq(resourceTable.id, resourceId)).limit(1)
+  const target = resourceRows[0]
+  if (!target) {
+    return new Response(JSON.stringify({ error: 'Resource not found' }), { status: 404 })
+  }
+
   const id = crypto.randomUUID()
-  await db.insert(bookmarkTable).values({ id, resourceId: body.resourceId, userId: session.user.id })
+  await db.insert(bookmarkTable).values({ id, resourceId, userId: user.id })
+
+  if (target.userId !== user.id) {
+    await createNotification({
+      userId: target.userId,
+      type: 'bookmark_update',
+      title: 'Your resource was bookmarked',
+      body: `${user.name} saved "${target.title}" for later study.`,
+      linkUrl: `/resources/${resourceId}`,
+    })
+  }
+
   return new Response(JSON.stringify({ success: true, id }), { status: 201 })
 }
 
 export async function GET(req: Request) {
-  const session = await auth.api.getSession({ headers: req.headers })
-  if (!session?.user) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+  const user = await getRequestUser(req.headers)
+  if (!user) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
   const rows = await db
     .select({ resourceId: bookmarkTable.resourceId })
     .from(bookmarkTable)
-    .where(eq(bookmarkTable.userId, session.user.id))
+    .where(eq(bookmarkTable.userId, user.id))
 
   return new Response(JSON.stringify(rows.map((row) => row.resourceId)), { status: 200 })
 }
 
 export async function DELETE(req: Request) {
   try {
-    const session = await auth.api.getSession({ headers: req.headers })
-    if (!session?.user) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+    const user = await getRequestUser(req.headers)
+    if (!user) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
     const url = new URL(req.url)
     let resourceId = url.searchParams.get('resourceId')
@@ -42,7 +75,7 @@ export async function DELETE(req: Request) {
     }
 
     await db.delete(bookmarkTable).where(
-      and(eq(bookmarkTable.resourceId, resourceId), eq(bookmarkTable.userId, session.user.id))
+      and(eq(bookmarkTable.resourceId, resourceId), eq(bookmarkTable.userId, user.id))
     )
 
     return new Response(JSON.stringify({ success: true }), { status: 200 })

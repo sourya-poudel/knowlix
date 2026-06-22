@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Compass, Bookmark, MessageSquarePlus } from 'lucide-react'
+import { Compass, Bookmark, MessageSquarePlus, FolderOpen } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 
 const ACTIONS = [
@@ -13,19 +13,25 @@ const ACTIONS = [
     title: 'Saved resources',
     description: 'Jump back into your bookmarked materials',
     icon: Bookmark,
-    href: '#saved-resources',
+    href: '/bookmarks',
+  },
+  {
+    title: 'Collections',
+    description: 'Organize resources into themed study lists',
+    icon: FolderOpen,
+    href: '/collections',
   },
   {
     title: 'Request material',
     description: 'Ask classmates for study material you need',
     icon: MessageSquarePlus,
-    href: '#request-material',
+    href: '/requests',
   },
 ]
 
 export function QuickActions() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {ACTIONS.map((action) => (
         <Link key={action.title} href={action.href} className="group block rounded-3xl transition-all hover:-translate-y-0.5 hover:shadow-xl">
           <Card className="cursor-pointer p-6 transition-colors hover:border-primary/40 hover:bg-muted/40">
@@ -37,9 +43,7 @@ export function QuickActions() {
                 {action.title}
               </span>
             </div>
-            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              {action.description}
-            </p>
+            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{action.description}</p>
           </Card>
         </Link>
       ))}

@@ -6,6 +6,7 @@ import { Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
 import { BrandLogo } from '@/components/brand-logo'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 const NAV_LINKS = [
   { label: 'Features', href: '#features' },
@@ -17,7 +18,7 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false)
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/70 bg-background/70 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 w-full border-b border-border/70 bg-background/85 shadow-[0_12px_40px_-32px_rgba(15,23,42,0.45)] backdrop-blur-xl">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
         <BrandLogo />
 
@@ -34,6 +35,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
+          <ThemeToggle />
           <Button variant="ghost" render={<Link href="/login" />}>
             Log in
           </Button>
@@ -53,6 +55,13 @@ export function SiteHeader() {
             <SheetTitle className="sr-only">Menu</SheetTitle>
             <div className="mt-2 flex flex-col gap-6">
               <BrandLogo />
+              <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-card px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Appearance</p>
+                  <p className="text-xs text-muted-foreground">Switch between light and dark modes</p>
+                </div>
+                <ThemeToggle />
+              </div>
               <nav className="flex flex-col gap-1" aria-label="Mobile">
                 {NAV_LINKS.map((link) => (
                   <Link

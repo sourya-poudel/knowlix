@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next'
 import { IBM_Plex_Mono, Plus_Jakarta_Sans } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
+import { ThemeProvider } from '@/components/theme-provider'
+import { InitialSplash } from '@/components/initial-splash'
 import './globals.css'
 
 const jakartaSans = Plus_Jakarta_Sans({
@@ -50,10 +52,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${jakartaSans.variable} ${plexMono.variable} bg-background`}>
+    <html lang="en" className={`${jakartaSans.variable} ${plexMono.variable} bg-background`} suppressHydrationWarning>
       <body className="min-h-dvh bg-background font-sans antialiased selection:bg-primary/15 selection:text-foreground">
-        {children}
-        <Toaster />
+        <ThemeProvider>
+          <InitialSplash />
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   )

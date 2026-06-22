@@ -1,61 +1,110 @@
+import { Suspense } from 'react'
+import type { Metadata } from 'next'
+import { AppShell } from '@/components/layout/app-shell'
 import { ResourceSection } from '@/components/dashboard/resource-section'
-import { db } from '@/lib/db'
-import { resource, user } from '@/lib/db/schema'
-import { and, eq, inArray } from 'drizzle-orm'
+import { ResourceSearchFilters } from '@/components/resources/search-filters'
+import { RecommendationSections } from '@/components/resources/recommendation-sections'
 import { requireInstitutionUser } from '@/lib/session'
+import { searchResources } from '@/lib/resource-queries'
 import type { MockResource } from '@/lib/mock-data'
-import { AmbientBackdrop } from '@/components/ui/ambient-backdrop'
+import { Skeleton } from '@/components/ui/skeleton'
 
-export default async function ResourcesPage() {
-  const currentUser = await requireInstitutionUser()
+export const metadata: Metadata = {
+  title: 'Explore Resources | Knowlix',
+  description: 'Browse and search approved campus resources.',
+}
 
-  const uploads = await db
-    .select()
-    .from(resource)
-    .where(and(eq(resource.status, 'approved'), eq(resource.institutionId, currentUser.institutionId)))
-    .orderBy(resource.createdAt)
+type PageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}
 
-  const users = await db
-    .select({ id: user.id, name: user.name })
-    .from(user)
-    .where(inArray(user.id, uploads.map((item) => item.userId)))
-
-  const userMap = new Map(users.map((u) => [u.id, u.name]))
-
-  const resources: MockResource[] = uploads.map((upload) => ({
-    id: upload.id,
-    title: upload.title,
-    type: upload.type as MockResource['type'],
-    courseCode: upload.courseCode ?? '',
-    courseName: upload.courseName ?? '',
-    uploaderName: userMap.get(upload.userId) ?? 'Unknown',
-    fileUrl: upload.fileUrl ?? undefined,
-    fileName: upload.fileName ?? undefined,
-    fileType: upload.fileType ?? undefined,
-    fileSize: upload.fileSize ?? 0,
-    upvoteCount: upload.upvoteCount,
-    downloadCount: upload.downloadCount,
-    viewCount: upload.viewCount,
+function mapToMockResource(item: Awaited<ReturnType<typeof searchResources>>[number]): MockResource {
+  return {
+    id: item.id,
+    title: item.title,
+    type: item.type as MockResource['type'],
+    courseCode: item.courseCode ?? '',
+    courseName: item.courseName ?? '',
+    uploaderName: item.uploaderName,
+    userId: item.userId,
+    fileUrl: item.fileUrl ?? undefined,
+    fileName: item.fileName ?? undefined,
+    fileType: item.fileType ?? undefined,
+    fileSize: item.fileSize ?? 0,
+    upvoteCount: item.upvoteCount,
+    downloadCount: item.downloadCount,
+    viewCount: item.viewCount,
+    ratingAvg: item.ratingAvg,
+    ratingCount: item.ratingCount,
     status: 'approved',
-    bookmarked: false,
-    createdAt: upload.createdAt.toISOString(),
-  }))
+    bookmarked: item.bookmarked,
+    createdAt: item.createdAt,
+  }
+}
+
+async function ResourceResults({ searchParams }: PageProps) {
+  const user = await requireInstitutionUser()
+  const params = await searchParams
+
+  const getParam = (key: string) => {
+    const value = params[key]
+    return typeof value === 'string' ? value : undefined
+  }
+
+  const yearParam = getParam('year')
+  const hasFilters = ['q', 'type', 'subject', 'year', 'tag', 'contributor'].some((key) => getParam(key))
+
+  const items = hasFilters
+    ? await searchResources(
+        user.institutionId,
+        {
+          q: getParam('q'),
+          type: getParam('type'),
+          subject: getParam('subject'),
+          year: yearParam ? Number(yearParam) : undefined,
+          contributorId: getParam('contributor'),
+          tag: getParam('tag'),
+        },
+        user.id,
+      )
+    : []
+
+  const resources = items.map(mapToMockResource)
+
+  if (!hasFilters) {
+    return <RecommendationSections />
+  }
 
   return (
-    <main className="relative mx-auto w-full max-w-7xl overflow-hidden px-4 py-10 sm:px-6">
-      <AmbientBackdrop className="opacity-70" variant="default" />
-      <div className="relative mb-8 overflow-hidden rounded-[2rem] border border-border/70 bg-card/85 p-8 shadow-sm backdrop-blur-sm">
-        <div className="absolute inset-x-0 top-0 h-20 bg-[linear-gradient(90deg,rgba(46,120,255,0.08),rgba(38,184,181,0.08))]" />
-        <h1 className="relative text-3xl font-semibold tracking-tight">Browse resources</h1>
-        <p className="relative mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          Explore approved uploads from your campus through a cleaner, more focused library experience.
+    <ResourceSection
+      title="Search results"
+      description={`${resources.length} ${resources.length === 1 ? 'resource' : 'resources'} matched your filters`}
+      resources={resources}
+    />
+  )
+}
+
+export default async function ResourcesPage({ searchParams }: PageProps) {
+  const user = await requireInstitutionUser()
+
+  return (
+    <AppShell user={user}>
+      <div className="mb-8 overflow-hidden rounded-[2rem] border border-border/70 bg-card/85 p-8 shadow-sm backdrop-blur-sm">
+        <h1 className="text-3xl font-semibold tracking-tight">Browse resources</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+          Explore approved uploads from your campus with advanced filters and personalized recommendations.
         </p>
       </div>
-      <ResourceSection
-        title="Approved resources"
-        description="Browse the best study material shared by your peers."
-        resources={resources}
-      />
-    </main>
+
+      <div className="mb-8">
+        <Suspense fallback={<Skeleton className="h-48 w-full rounded-[1.75rem]" />}>
+          <ResourceSearchFilters />
+        </Suspense>
+      </div>
+
+      <Suspense fallback={<Skeleton className="h-64 w-full rounded-[1.75rem]" />}>
+        <ResourceResults searchParams={searchParams} />
+      </Suspense>
+    </AppShell>
   )
 }

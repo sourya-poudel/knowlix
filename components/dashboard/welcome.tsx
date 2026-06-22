@@ -22,7 +22,7 @@ export function Welcome({
 
   return (
     <>
-      <section className="grid gap-6 overflow-hidden rounded-3xl border border-border bg-card p-6 sm:grid-cols-[1.5fr_1fr] sm:items-center sm:p-8">
+      <section className="grid gap-6 overflow-hidden rounded-3xl border border-border/70 bg-card/95 p-6 shadow-sm sm:grid-cols-[1.5fr_1fr] sm:items-center sm:p-8">
         <div className="flex flex-col gap-3">
           <span className="text-sm font-semibold uppercase tracking-[0.36em] text-primary/80">
             Student dashboard
@@ -49,7 +49,7 @@ export function Welcome({
             Upload resource
           </Button>
         </div>
-        <div className="rounded-[2rem] bg-primary/5 p-6 text-card-foreground shadow-sm shadow-primary/10">
+        <div className="rounded-[2rem] border border-border/70 bg-background/70 p-6 text-card-foreground shadow-sm">
           <div className="flex items-center gap-3 text-sm font-semibold text-primary">
             <Upload className="size-5" />
             Ready to share your research?

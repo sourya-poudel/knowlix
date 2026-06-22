@@ -1,54 +1,177 @@
-import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { resource, user as userTable } from '@/lib/db/schema'
-import { eq, sql } from 'drizzle-orm'
-import { headers } from 'next/headers'
+import { auditLog, comment, resource, session, user as userTable } from '@/lib/db/schema'
+import { and, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm'
 import { getRequestUser } from '@/lib/session'
+import { recordAuditLog } from '@/lib/admin-audit'
 
-export async function GET() {
-  try {
-    const user = await getRequestUser(await headers())
+export async function GET(req: Request) {
+  const currentUser = await getRequestUser(req.headers)
+  if (!currentUser) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (currentUser.role !== 'admin') return Response.json({ error: 'Forbidden' }, { status: 403 })
 
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const url = new URL(req.url)
+  const query = url.searchParams.get('q')?.trim()
+  const role = url.searchParams.get('role')
+  const status = url.searchParams.get('status')
 
-    if (user.role !== 'admin') {
-      return Response.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    // Get all users with their stats
-    const users = await db
-      .select({
-        id: userTable.id,
-        name: userTable.name,
-        email: userTable.email,
-        role: userTable.role,
-        bio: userTable.bio,
-        reputation: userTable.reputation,
-        createdAt: userTable.createdAt,
-      })
-      .from(userTable)
-
-    // Get upload count per user
-    const uploadCounts = await db
-      .select({
-        userId: resource.userId,
-        uploadCount: sql<number>`COUNT(*)`.mapWith(Number),
-      })
-      .from(resource)
-      .groupBy(resource.userId)
-
-    const uploadMap = new Map(uploadCounts.map((r) => [r.userId, r.uploadCount]))
-
-    const usersWithStats = users.map((u) => ({
-      ...u,
-      uploadCount: uploadMap.get(u.id) || 0,
-    }))
-
-    return Response.json(usersWithStats)
-  } catch (error) {
-    console.error('Users error:', error)
-    return Response.json({ error: 'Failed to fetch users' }, { status: 500 })
+  const conditions = []
+  if (query) {
+    const pattern = `%${query}%`
+    conditions.push(or(ilike(userTable.name, pattern), ilike(userTable.email, pattern))!)
   }
+  if (role) conditions.push(eq(userTable.role, role))
+  if (status) conditions.push(eq(userTable.status, status))
+
+  const users = await db
+    .select({
+      id: userTable.id,
+      name: userTable.name,
+      email: userTable.email,
+      role: userTable.role,
+      status: userTable.status,
+      bio: userTable.bio,
+      reputation: userTable.reputation,
+      institutionId: userTable.institutionId,
+      createdAt: userTable.createdAt,
+      suspendedReason: userTable.suspendedReason,
+      suspendedAt: userTable.suspendedAt,
+    })
+    .from(userTable)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(userTable.createdAt))
+
+  const uploadCounts = await db
+    .select({ userId: resource.userId, uploadCount: sql<number>`count(*)::int` })
+    .from(resource)
+    .groupBy(resource.userId)
+  const commentCounts = await db
+    .select({ userId: comment.userId, commentCount: sql<number>`count(*)::int` })
+    .from(comment)
+    .groupBy(comment.userId)
+  const lastSessions = await db
+    .select({ userId: session.userId, lastActiveAt: sql<Date>`max(${session.updatedAt})` })
+    .from(session)
+    .groupBy(session.userId)
+
+  const uploadMap = new Map(uploadCounts.map((row) => [row.userId, row.uploadCount]))
+  const commentMap = new Map(commentCounts.map((row) => [row.userId, row.commentCount]))
+  const sessionMap = new Map(lastSessions.map((row) => [row.userId, row.lastActiveAt]))
+
+  return Response.json(
+    users.map((u) => ({
+      ...u,
+      uploadCount: uploadMap.get(u.id) ?? 0,
+      commentCount: commentMap.get(u.id) ?? 0,
+      lastActiveAt: sessionMap.get(u.id)?.toISOString() ?? null,
+    })),
+  )
+}
+
+export async function PATCH(req: Request) {
+  const currentUser = await getRequestUser(req.headers)
+  if (!currentUser) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (currentUser.role !== 'admin') return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+  const body = await req.json().catch(() => ({}))
+  const userId = String(body.userId ?? '')
+  const action = String(body.action ?? '')
+  const reason = body.reason ? String(body.reason) : null
+  const institutionId = body.institutionId ? String(body.institutionId) : null
+
+  if (!userId || !action) {
+    return Response.json({ error: 'userId and action are required' }, { status: 400 })
+  }
+
+  const targetRows = await db.select().from(userTable).where(eq(userTable.id, userId)).limit(1)
+  const target = targetRows[0]
+  if (!target) {
+    return Response.json({ error: 'User not found' }, { status: 404 })
+  }
+
+  if (target.id === currentUser.id) {
+    return Response.json({ error: 'You cannot manage your own account from here' }, { status: 400 })
+  }
+
+  if (action === 'promoteModerator' || action === 'assignModerator') {
+    await db
+      .update(userTable)
+      .set({
+        role: 'moderator',
+        institutionId: institutionId ?? target.institutionId,
+        updatedAt: new Date(),
+      })
+      .where(eq(userTable.id, userId))
+    await recordAuditLog({
+      actorId: currentUser.id,
+      actorRole: currentUser.role,
+      action: 'moderator_promoted',
+      entityType: 'user',
+      entityId: userId,
+      targetInstitutionId: institutionId ?? target.institutionId ?? undefined,
+    })
+    return Response.json({ success: true })
+  }
+
+  if (action === 'removeModerator') {
+    await db
+      .update(userTable)
+      .set({ role: 'student', updatedAt: new Date() })
+      .where(eq(userTable.id, userId))
+    await recordAuditLog({
+      actorId: currentUser.id,
+      actorRole: currentUser.role,
+      action: 'moderator_removed',
+      entityType: 'user',
+      entityId: userId,
+      targetInstitutionId: target.institutionId,
+    })
+    return Response.json({ success: true })
+  }
+
+  if (action === 'suspend') {
+    await db
+      .update(userTable)
+      .set({
+        status: 'suspended',
+        suspendedReason: reason,
+        suspendedAt: new Date(),
+        suspendedBy: currentUser.id,
+        updatedAt: new Date(),
+      })
+      .where(eq(userTable.id, userId))
+    await recordAuditLog({
+      actorId: currentUser.id,
+      actorRole: currentUser.role,
+      action: 'user_suspended',
+      entityType: 'user',
+      entityId: userId,
+      targetInstitutionId: target.institutionId,
+      metadata: { reason },
+    })
+    return Response.json({ success: true })
+  }
+
+  if (action === 'reinstate') {
+    await db
+      .update(userTable)
+      .set({
+        status: 'active',
+        suspendedReason: null,
+        suspendedAt: null,
+        suspendedBy: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(userTable.id, userId))
+    await recordAuditLog({
+      actorId: currentUser.id,
+      actorRole: currentUser.role,
+      action: 'user_reinstated',
+      entityType: 'user',
+      entityId: userId,
+      targetInstitutionId: target.institutionId,
+    })
+    return Response.json({ success: true })
+  }
+
+  return Response.json({ error: 'Invalid action' }, { status: 400 })
 }

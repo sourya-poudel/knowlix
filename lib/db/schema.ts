@@ -1,7 +1,9 @@
 import {
   boolean,
   integer,
+  jsonb,
   pgTable,
+  real,
   text,
   timestamp,
   unique,
@@ -19,8 +21,12 @@ export const user = pgTable('user', {
   image: text('image'),
   institutionId: text('institutionId'),
   role: text('role').notNull().default('student'),
+  status: text('status').notNull().default('active'),
   bio: text('bio'),
   reputation: integer('reputation').notNull().default(0),
+  suspendedReason: text('suspendedReason'),
+  suspendedAt: timestamp('suspendedAt'),
+  suspendedBy: text('suspendedBy'),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 })
@@ -75,8 +81,17 @@ export const institution = pgTable('institution', {
   slug: text('slug').notNull().unique(),
   domain: text('domain').notNull(),
   logo: text('logo'),
+  description: text('description'),
+  bannerImage: text('bannerImage'),
+  domainRestrictions: text('domainRestrictions').array().notNull().default([]),
+  isApproved: boolean('isApproved').notNull().default(false),
+  isActive: boolean('isActive').notNull().default(true),
+  approvedBy: text('approvedBy'),
+  approvedAt: timestamp('approvedAt'),
+  disabledAt: timestamp('disabledAt'),
   memberCount: integer('memberCount').notNull().default(0),
   resourceCount: integer('resourceCount').notNull().default(0),
+  settingsUpdatedAt: timestamp('settingsUpdatedAt'),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
 })
 
@@ -104,9 +119,24 @@ export const resource = pgTable('resource', {
   viewCount: integer('viewCount').notNull().default(0),
   downloadCount: integer('downloadCount').notNull().default(0),
   upvoteCount: integer('upvoteCount').notNull().default(0),
+  ratingAvg: real('ratingAvg').notNull().default(0),
+  ratingCount: integer('ratingCount').notNull().default(0),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 })
+
+export const rating = pgTable(
+  'rating',
+  {
+    id: text('id').primaryKey(),
+    resourceId: text('resourceId').notNull(),
+    userId: text('userId').notNull(),
+    value: integer('value').notNull(),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+  },
+  (t) => ({ uniq: unique().on(t.resourceId, t.userId) }),
+)
 
 export const vote = pgTable(
   'vote',
@@ -144,8 +174,13 @@ export const comment = pgTable('comment', {
   id: text('id').primaryKey(),
   resourceId: text('resourceId').notNull(),
   userId: text('userId').notNull(),
+  parentId: text('parentId'),
   body: text('body').notNull(),
+  isDeleted: boolean('isDeleted').notNull().default(false),
+  isHidden: boolean('isHidden').notNull().default(false),
+  helpfulCount: integer('helpfulCount').notNull().default(0),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 })
 
 export const request = pgTable('request', {
@@ -190,5 +225,17 @@ export const report = pgTable('report', {
   reason: text('reason').notNull(),
   details: text('details'),
   status: text('status').notNull().default('open'),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+})
+
+export const auditLog = pgTable('audit_log', {
+  id: text('id').primaryKey(),
+  actorId: text('actorId').notNull(),
+  actorRole: text('actorRole').notNull(),
+  action: text('action').notNull(),
+  entityType: text('entityType').notNull(),
+  entityId: text('entityId'),
+  targetInstitutionId: text('targetInstitutionId'),
+  metadata: jsonb('metadata'),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
 })

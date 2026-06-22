@@ -88,9 +88,22 @@ CREATE TABLE resource (
   "viewCount" integer NOT NULL DEFAULT 0,
   "downloadCount" integer NOT NULL DEFAULT 0,
   "upvoteCount" integer NOT NULL DEFAULT 0,
+  "ratingAvg" real NOT NULL DEFAULT 0,
+  "ratingCount" integer NOT NULL DEFAULT 0,
   "createdAt" timestamp NOT NULL DEFAULT now(),
   "updatedAt" timestamp NOT NULL DEFAULT now()
 );
+
+CREATE TABLE rating (
+  id text PRIMARY KEY,
+  "resourceId" text NOT NULL,
+  "userId" text NOT NULL,
+  value integer NOT NULL,
+  "createdAt" timestamp NOT NULL DEFAULT now(),
+  "updatedAt" timestamp NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX rating_resource_user_idx ON rating ("resourceId", "userId");
 
 CREATE TABLE vote (
   id text PRIMARY KEY,
@@ -124,8 +137,13 @@ CREATE TABLE comment (
   id text PRIMARY KEY,
   "resourceId" text NOT NULL,
   "userId" text NOT NULL,
+  "parentId" text,
   body text NOT NULL,
-  "createdAt" timestamp NOT NULL DEFAULT now()
+  "isDeleted" boolean NOT NULL DEFAULT false,
+  "isHidden" boolean NOT NULL DEFAULT false,
+  "helpfulCount" integer NOT NULL DEFAULT 0,
+  "createdAt" timestamp NOT NULL DEFAULT now(),
+  "updatedAt" timestamp NOT NULL DEFAULT now()
 );
 
 CREATE TABLE request (

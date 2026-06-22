@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
-import { Download, Eye, Trash2, CheckCircle, XCircle, Users } from 'lucide-react'
+import { Download, Eye, CheckCircle, XCircle } from 'lucide-react'
 import {
   PieChart,
   Pie,
@@ -20,6 +20,9 @@ import {
   Cell,
   ResponsiveContainer,
 } from 'recharts'
+import { AuditLogPanel } from '@/components/admin/audit-log-panel'
+import { InstitutionManagement } from '@/components/admin/institution-management'
+import { UserManagement } from '@/components/admin/user-management'
 
 export type AdminResource = {
   id: string
@@ -42,26 +45,24 @@ export type AdminStats = {
   approved: number
   rejected: number
   totalUsers: number
+  activeUsers: number
+  totalInstitutions: number
+  approvedInstitutions: number
+  inactiveInstitutions: number
+  recentlyUpdatedInstitutions: number
+  bookmarkCount: number
+  commentCount: number
+  approvedResources: number
+  downloadCount: number
+  moderationEvents: number
   statusChart: Array<{ name: string; value: number }>
   trendsChart: Array<{ date: string; uploads: number }>
-}
-
-export type AdminUser = {
-  id: string
-  name: string
-  email: string
-  role: string
-  bio: string | null
-  reputation: number
-  createdAt: string
-  uploadCount: number
 }
 
 const COLORS = ['#eab308', '#22c55e', '#ef4444']
 
 export function AdminDashboard({ showUsers = true }: { showUsers?: boolean }) {
   const [stats, setStats] = useState<AdminStats | null>(null)
-  const [users, setUsers] = useState<AdminUser[]>([])
   const [activeTab, setActiveTab] = useState('overview')
   const [resources, setResources] = useState<AdminResource[]>([])
   const [loading, setLoading] = useState(false)
@@ -73,9 +74,6 @@ export function AdminDashboard({ showUsers = true }: { showUsers?: boolean }) {
 
   useEffect(() => {
     fetchStats()
-    if (showUsers) {
-      fetchUsers()
-    }
   }, [])
 
   useEffect(() => {
@@ -85,23 +83,10 @@ export function AdminDashboard({ showUsers = true }: { showUsers?: boolean }) {
     }
   }, [activeTab, resourceTab])
 
-  useEffect(() => {
-    if (showUsers) {
-      fetchUsers()
-    }
-  }, [showUsers])
-
   async function fetchStats() {
     const res = await fetch('/api/admin/stats')
     if (res.ok) {
       setStats(await res.json())
-    }
-  }
-
-  async function fetchUsers() {
-    const res = await fetch('/api/admin/users')
-    if (res.ok) {
-      setUsers(await res.json())
     }
   }
 
@@ -146,11 +131,11 @@ export function AdminDashboard({ showUsers = true }: { showUsers?: boolean }) {
         <div className="absolute inset-x-0 top-0 h-24 bg-[linear-gradient(90deg,rgba(46,120,255,0.08),rgba(38,184,181,0.08))]" />
         <div className="relative flex flex-col gap-3">
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-primary">
-            Moderation console
+            Platform administration
           </div>
           <h1 className="text-3xl font-semibold tracking-tight">Admin Dashboard</h1>
           <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-            Manage resources, view statistics, and moderate community submissions.
+            Govern resources, institutions, users, and audit activity across the platform.
           </p>
         </div>
       </div>
@@ -158,44 +143,71 @@ export function AdminDashboard({ showUsers = true }: { showUsers?: boolean }) {
       {/* Main Tabs */}
       <div className="mb-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={`grid w-full ${showUsers ? 'grid-cols-3' : 'grid-cols-2'} rounded-full bg-muted/70 p-1`}>
+          <TabsList className={`grid w-full ${showUsers ? 'grid-cols-5' : 'grid-cols-4'} rounded-full bg-muted/70 p-1`}>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="resources">Resources</TabsTrigger>
+            <TabsTrigger value="institutions">Institutions</TabsTrigger>
             {showUsers ? <TabsTrigger value="users">Users</TabsTrigger> : null}
+            <TabsTrigger value="audit">Audit</TabsTrigger>
           </TabsList>
 
           {/* OVERVIEW TAB */}
           <TabsContent value="overview" className="space-y-8">
             {/* Statistics Cards */}
             {stats && (
-              <div className="grid gap-4 md:grid-cols-5">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <Card className="rounded-[1.5rem] border-border/70 p-6 shadow-sm">
                   <p className="text-sm font-medium text-muted-foreground">Total Resources</p>
                   <p className="mt-2 text-3xl font-bold">{stats.total}</p>
                 </Card>
                 <Card className="rounded-[1.5rem] border-yellow-200 bg-yellow-50 p-6 dark:border-yellow-900 dark:bg-yellow-950">
                   <p className="text-sm font-medium text-yellow-900 dark:text-yellow-200">Pending</p>
-                  <p className="mt-2 text-3xl font-bold text-yellow-900 dark:text-yellow-200">
-                    {stats.pending}
-                  </p>
+                  <p className="mt-2 text-3xl font-bold text-yellow-900 dark:text-yellow-200">{stats.pending}</p>
                 </Card>
                 <Card className="rounded-[1.5rem] border-green-200 bg-green-50 p-6 dark:border-green-900 dark:bg-green-950">
                   <p className="text-sm font-medium text-green-900 dark:text-green-200">Approved</p>
-                  <p className="mt-2 text-3xl font-bold text-green-900 dark:text-green-200">
-                    {stats.approved}
-                  </p>
+                  <p className="mt-2 text-3xl font-bold text-green-900 dark:text-green-200">{stats.approved}</p>
                 </Card>
                 <Card className="rounded-[1.5rem] border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-950">
                   <p className="text-sm font-medium text-red-900 dark:text-red-200">Rejected</p>
-                  <p className="mt-2 text-3xl font-bold text-red-900 dark:text-red-200">
-                    {stats.rejected}
-                  </p>
+                  <p className="mt-2 text-3xl font-bold text-red-900 dark:text-red-200">{stats.rejected}</p>
                 </Card>
                 <Card className="rounded-[1.5rem] border-blue-200 bg-blue-50 p-6 dark:border-blue-900 dark:bg-blue-950">
                   <p className="text-sm font-medium text-blue-900 dark:text-blue-200">Total Users</p>
-                  <p className="mt-2 text-3xl font-bold text-blue-900 dark:text-blue-200">
-                    {stats.totalUsers}
-                  </p>
+                  <p className="mt-2 text-3xl font-bold text-blue-900 dark:text-blue-200">{stats.totalUsers}</p>
+                </Card>
+                <Card className="rounded-[1.5rem] border-slate-200 bg-slate-50 p-6 dark:border-slate-800 dark:bg-slate-950">
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-200">Active Users</p>
+                  <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-200">{stats.activeUsers}</p>
+                </Card>
+                <Card className="rounded-[1.5rem] border-slate-200 bg-slate-50 p-6 dark:border-slate-800 dark:bg-slate-950">
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-200">Institutions</p>
+                  <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-200">{stats.totalInstitutions}</p>
+                </Card>
+                <Card className="rounded-[1.5rem] border-slate-200 bg-slate-50 p-6 dark:border-slate-800 dark:bg-slate-950">
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-200">Audit Events</p>
+                  <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-200">{stats.moderationEvents}</p>
+                </Card>
+              </div>
+            )}
+
+            {stats && (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <Card className="rounded-[1.5rem] border-border/70 p-6 shadow-sm">
+                  <p className="text-sm font-medium text-muted-foreground">Approved Resources</p>
+                  <p className="mt-2 text-2xl font-semibold">{stats.approvedResources}</p>
+                </Card>
+                <Card className="rounded-[1.5rem] border-border/70 p-6 shadow-sm">
+                  <p className="text-sm font-medium text-muted-foreground">Bookmarks</p>
+                  <p className="mt-2 text-2xl font-semibold">{stats.bookmarkCount}</p>
+                </Card>
+                <Card className="rounded-[1.5rem] border-border/70 p-6 shadow-sm">
+                  <p className="text-sm font-medium text-muted-foreground">Comments</p>
+                  <p className="mt-2 text-2xl font-semibold">{stats.commentCount}</p>
+                </Card>
+                <Card className="rounded-[1.5rem] border-border/70 p-6 shadow-sm">
+                  <p className="text-sm font-medium text-muted-foreground">Downloads</p>
+                  <p className="mt-2 text-2xl font-semibold">{stats.downloadCount}</p>
                 </Card>
               </div>
             )}
@@ -251,21 +263,40 @@ export function AdminDashboard({ showUsers = true }: { showUsers?: boolean }) {
             )}
           </TabsContent>
 
+          <TabsContent value="institutions" className="space-y-6">
+            <InstitutionManagement />
+          </TabsContent>
+
           {/* RESOURCES TAB */}
           <TabsContent value="resources" className="space-y-6">
             <div className="rounded-[1.5rem] border border-border/70 bg-card/90 shadow-sm">
               <div className="border-b border-border px-6 pt-6">
-                <TabsList className="grid w-full grid-cols-3 rounded-full bg-muted/70 p-1">
-                  <TabsTrigger value="pending" onClick={() => setResourceTab('pending')}>
+                <div className="grid w-full grid-cols-3 rounded-full bg-muted/70 p-1">
+                  <Button
+                    type="button"
+                    variant={resourceTab === 'pending' ? 'default' : 'ghost'}
+                    className="rounded-full"
+                    onClick={() => setResourceTab('pending')}
+                  >
                     Pending ({stats?.pending || 0})
-                  </TabsTrigger>
-                  <TabsTrigger value="approved" onClick={() => setResourceTab('approved')}>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={resourceTab === 'approved' ? 'default' : 'ghost'}
+                    className="rounded-full"
+                    onClick={() => setResourceTab('approved')}
+                  >
                     Approved ({stats?.approved || 0})
-                  </TabsTrigger>
-                  <TabsTrigger value="rejected" onClick={() => setResourceTab('rejected')}>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={resourceTab === 'rejected' ? 'default' : 'ghost'}
+                    className="rounded-full"
+                    onClick={() => setResourceTab('rejected')}
+                  >
                     Rejected ({stats?.rejected || 0})
-                  </TabsTrigger>
-                </TabsList>
+                  </Button>
+                </div>
               </div>
 
               <div className="p-6">
@@ -417,59 +448,16 @@ export function AdminDashboard({ showUsers = true }: { showUsers?: boolean }) {
             </div>
           </TabsContent>
 
-          {/* USERS TAB */}
+
           {showUsers ? (
             <TabsContent value="users" className="space-y-6">
-            <div className="mb-4 text-sm text-muted-foreground">
-              Total Users: <span className="font-semibold text-foreground">{users.length}</span>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {users.map((user) => (
-                <Card key={user.id} className="flex flex-col gap-4 rounded-[1.5rem] border-border/70 p-6 shadow-sm">
-                  <div>
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h3 className="font-semibold text-lg">{user.name}</h3>
-                        <p className="text-xs text-muted-foreground">{user.email}</p>
-                      </div>
-                      <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                        {user.role}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {user.bio && (
-                    <div className="text-sm text-muted-foreground italic border-l-2 border-muted pl-3">
-                      "{user.bio}"
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div className="rounded-lg bg-muted p-3">
-                      <p className="text-xs text-muted-foreground">Uploads</p>
-                      <p className="font-semibold text-lg">{user.uploadCount}</p>
-                    </div>
-                    <div className="rounded-lg bg-muted p-3">
-                      <p className="text-xs text-muted-foreground">Reputation</p>
-                      <p className="font-semibold text-lg">{user.reputation}</p>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-muted-foreground">
-                    Joined {new Date(user.createdAt).toLocaleDateString()}
-                  </p>
-                </Card>
-              ))}
-            </div>
-
-            {users.length === 0 && (
-              <Card className="p-8 text-center text-muted-foreground">
-                No users found.
-              </Card>
-            )}
+              <UserManagement />
             </TabsContent>
           ) : null}
+
+          <TabsContent value="audit" className="space-y-6">
+            <AuditLogPanel />
+          </TabsContent>
         </Tabs>
       </div>
     </div>

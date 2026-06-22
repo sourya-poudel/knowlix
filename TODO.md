@@ -2,38 +2,38 @@
 
 ## Repository audit summary
 
-- App Router Next.js 16 app with Better Auth, Drizzle ORM, PostgreSQL, and Azure Blob storage already wired.
-- Marketing, auth, dashboard, and admin pages already exist, but the MVP workflow is only partially enforced end to end.
-- Current moderation flow is effectively admin-only and still relies on email checks in a few routes.
-- Resource discovery is currently global across all institutions instead of institution-scoped.
-- Uploads already persist to Blob + `resource` rows, but validation, role checks, and moderation metadata are incomplete.
+- App Router Next.js 16 app with Better Auth, Drizzle ORM, PostgreSQL, and Azure Blob storage.
+- MVP workflow complete: landing, auth, dashboard, upload, explore, moderation, RBAC.
+- Phase 2 extends the platform into a collaborative academic hub.
 
-## MVP order
+## Phase 2 checklist
 
-1. Lock down authentication and role-based access.
-2. Make upload creation institution-aware and validation-safe.
-3. Make approved resource discovery institution-scoped.
-4. Make moderation accessible to moderators, not just the hard-coded admin email.
-5. Add route protection and loading/error states for the core student and moderator surfaces.
-6. Verify the student upload -> pending -> approval -> published -> discovery flow.
+- Phase 2 already includes working APIs and UI for comments, ratings, bookmarks, collections, requests, notifications, profiles, and advanced search.
+- Extended bookmarks to emit owner notifications and exposed collection editing on the collection detail route.
 
-## Execution checklist
+## Phase 3 checklist
 
-- [x] Audit current routes, schema, auth, storage, and UI surfaces.
-- [x] Replace hard-coded admin-email checks with role-based authorization helpers.
-- [x] Add shared auth/role utilities for server routes and pages.
-- [x] Harden the upload API so only verified institutional users can upload into their own institution.
-- [x] Scope public discovery to the signed-in user's institution.
-- [x] Expose moderation workflow to moderator/admin users through protected routes.
-- [x] Refresh the visual system across landing, auth, dashboard, and admin surfaces.
-- [ ] Add better loading and error states to upload and moderation UI.
-- [x] Run typecheck and fix any regressions introduced by the changes.
-- [ ] Run lint once eslint is available in the environment.
+- Admin foundation now includes resource moderation, institution management, user suspension and role changes, and searchable audit logs.
+- Added platform analytics for resources, users, institutions, bookmarks, comments, downloads, and moderation events.
+- Added a reload-safe branded splash screen, route loading state, light/dark theme toggle, and a more restrained professional UI pass.
+- Next platform steps: email recovery flows, richer notification controls, institution onboarding policies, accessibility pass, SEO polish, and performance hardening.
+
+## Database migration
+
+Run `phase2-migration.sql` against existing databases to add:
+
+- `rating` table
+- `resource.ratingAvg` / `resource.ratingCount`
+- Extended `comment` columns (`parentId`, moderation fields, timestamps)
+
+Run `phase3-migration.sql` to add:
+
+- User suspension fields
+- Institution lifecycle and settings fields
+- `audit_log` table for admin activity tracking
 
 ## Notes
 
-- Preserve the existing design system and component library.
-- Reuse the current schema, Better Auth setup, Drizzle ORM, and Blob integration.
-- Avoid replacing working implementations unless they block the MVP path.
-- TypeScript compile check passed with `npm exec tsc --noEmit`.
-- `npm run lint` could not run in this shell because `eslint` is not on PATH.
+- Reused existing schema, auth, components, and theme system.
+- Extended APIs under `app/api/` without rewriting MVP routes.
+- TypeScript compile check: run `npm exec tsc --noEmit`.

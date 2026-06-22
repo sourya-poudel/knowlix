@@ -166,9 +166,9 @@
   body {
     @apply bg-background text-foreground;
     background-image:
-      radial-gradient(circle at top left, color-mix(in oklch, var(--primary) 14%, transparent), transparent 36%),
-      radial-gradient(circle at 85% 12%, color-mix(in oklch, var(--accent) 16%, transparent), transparent 30%),
-      radial-gradient(circle at 50% 100%, color-mix(in oklch, var(--primary) 8%, transparent), transparent 34%);
+      radial-gradient(circle at top left, color-mix(in oklch, var(--primary) 8%, transparent), transparent 34%),
+      radial-gradient(circle at 85% 12%, color-mix(in oklch, var(--accent) 10%, transparent), transparent 28%),
+      linear-gradient(to bottom, transparent, color-mix(in oklch, var(--background) 92%, var(--foreground) 8%) 100%);
     background-attachment: fixed;
     background-repeat: no-repeat;
   }
@@ -177,11 +177,11 @@
     position: fixed;
     inset: 0;
     pointer-events: none;
-    background-image: linear-gradient(rgba(255, 255, 255, 0.34) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.22) 1px, transparent 1px);
-    background-size: 100% 56px, 56px 100%;
-    opacity: 0.22;
-    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), transparent 90%);
+    background-image: linear-gradient(rgba(255, 255, 255, 0.22) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+    background-size: 100% 64px, 64px 100%;
+    opacity: 0.1;
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent 88%);
   }
   html {
     @apply font-sans;
@@ -190,12 +190,12 @@
 
 @layer utilities {
   .knowlix-noise {
-    background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.22) 1px, transparent 0);
-    background-size: 18px 18px;
+    background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.16) 1px, transparent 0);
+    background-size: 22px 22px;
   }
 
   .knowlix-orb {
-    animation: knowlix-drift 18s ease-in-out infinite alternate;
+    animation: knowlix-drift 22s ease-in-out infinite alternate;
   }
 
   .knowlix-orb-b {
@@ -211,6 +211,10 @@
   .knowlix-glow {
     box-shadow: 0 24px 120px -56px color-mix(in oklch, var(--primary) 60%, transparent);
   }
+
+  .knowlix-loading-bar {
+    animation: knowlix-loading-bar 1.8s ease-in-out infinite;
+  }
 }
 
 @keyframes knowlix-drift {
@@ -222,5 +226,19 @@
   }
   100% {
     transform: translate3d(-1rem, 1rem, 0) scale(0.98);
+  }
+}
+
+@keyframes knowlix-loading-bar {
+  0% {
+    transform: translateX(-40%);
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(140%);
+    opacity: 0.6;
   }
 }

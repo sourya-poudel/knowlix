@@ -17,7 +17,9 @@ export async function getCurrentUser(): Promise<AppUser | null> {
     .from(userTable)
     .where(eq(userTable.id, session.user.id))
     .limit(1)
-  return rows[0] ?? null
+  const user = rows[0] ?? null
+  if (!user || user.status === 'suspended') return null
+  return user
 }
 
 /** Requires an authenticated user. Redirects to sign-in otherwise. */
@@ -45,7 +47,9 @@ export async function getRequestUser(requestHeaders: Headers): Promise<AppUser |
     .where(eq(userTable.id, session.user.id))
     .limit(1)
 
-  return rows[0] ?? null
+  const user = rows[0] ?? null
+  if (!user || user.status === 'suspended') return null
+  return user
 }
 
 /** Throws when the current request user is missing or lacks the required role. */
