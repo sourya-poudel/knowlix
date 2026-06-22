@@ -4,22 +4,17 @@ import { resource } from '@/lib/db/schema'
 import { user as userTable } from '@/lib/db/schema'
 import { eq, sql } from 'drizzle-orm'
 import { headers } from 'next/headers'
+import { getRequestUser } from '@/lib/session'
 
 export async function GET() {
   try {
-    const session = await auth.api.getSession({ headers: await headers() })
+    const user = await getRequestUser(await headers())
 
-    if (!session?.user) {
+    if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const appUser = await db
-      .select()
-      .from(userTable)
-      .where(eq(userTable.id, session.user.id))
-      .limit(1)
-
-    if (!appUser[0] || appUser[0].role !== 'admin') {
+    if (!['moderator', 'admin'].includes(user.role)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 

@@ -17,7 +17,7 @@ export function BrandLogo({
       className={cn('inline-flex items-center gap-2', className)}
       aria-label="Knowlix home"
     >
-      <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+      <span className="flex size-9 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,var(--primary),var(--accent))] text-primary-foreground shadow-[0_12px_30px_-16px_rgba(37,99,235,0.55)] ring-1 ring-white/15">
         <GraduationCap className="size-5" aria-hidden="true" />
       </span>
       {showWordmark && (

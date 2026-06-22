@@ -12,9 +12,10 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const email = session.user.email
-    if (email !== 'admin@sourya.com') {
-      return Response.json({ error: 'Only admin@sourya.com can have admin role' }, { status: 403 })
+    const bootstrapEmail = process.env.ADMIN_BOOTSTRAP_EMAIL?.toLowerCase()
+    const email = session.user.email?.toLowerCase()
+    if (!bootstrapEmail || email !== bootstrapEmail) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Update user role to admin

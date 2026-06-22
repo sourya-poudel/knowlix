@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { user as userTable } from '@/lib/db/schema'
+import { hasRoleAccess, type AppRole } from '@/lib/access'
 import { eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
@@ -33,13 +34,45 @@ export async function getUserId(): Promise<string> {
   return session.user.id
 }
 
+/** Returns the current app user for an arbitrary request header set. */
+export async function getRequestUser(requestHeaders: Headers): Promise<AppUser | null> {
+  const session = await auth.api.getSession({ headers: requestHeaders })
+  if (!session?.user) return null
+
+  const rows = await db
+    .select()
+    .from(userTable)
+    .where(eq(userTable.id, session.user.id))
+    .limit(1)
+
+  return rows[0] ?? null
+}
+
+/** Throws when the current request user is missing or lacks the required role. */
+export async function requireRequestRole(
+  requestHeaders: Headers,
+  roles: AppRole[],
+): Promise<AppUser> {
+  const user = await getRequestUser(requestHeaders)
+  if (!user) throw new Error('Unauthorized')
+  if (!hasRoleAccess(user.role, roles)) throw new Error('Forbidden')
+  return user
+}
+
 /** Requires a specific role (or higher privilege). */
 export async function requireRole(
-  roles: Array<'student' | 'moderator' | 'admin'>,
+  roles: AppRole[],
 ): Promise<AppUser> {
   const u = await requireUser()
-  if (!roles.includes(u.role as 'student' | 'moderator' | 'admin')) {
+  if (!hasRoleAccess(u.role, roles)) {
     redirect('/dashboard')
   }
   return u
+}
+
+/** Requires a signed-in user who belongs to an institution. */
+export async function requireInstitutionUser(): Promise<AppUser & { institutionId: string }> {
+  const u = await requireUser()
+  if (!u.institutionId) redirect('/signup')
+  return u as AppUser & { institutionId: string }
 }

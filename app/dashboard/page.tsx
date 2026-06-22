@@ -6,11 +6,12 @@ import { Welcome } from '@/components/dashboard/welcome'
 import { StatCards } from '@/components/dashboard/stat-cards'
 import { QuickActions } from '@/components/dashboard/quick-actions'
 import { ResourceSection } from '@/components/dashboard/resource-section'
-import { requireUser } from '@/lib/session'
+import { requireInstitutionUser } from '@/lib/session'
 import { db } from '@/lib/db'
 import { bookmark, institution, resource } from '@/lib/db/schema'
-import { desc, eq, inArray } from 'drizzle-orm'
+import { and, desc, eq, inArray } from 'drizzle-orm'
 import type { MockResource } from '@/lib/mock-data'
+import { AmbientBackdrop } from '@/components/ui/ambient-backdrop'
 
 export const metadata: Metadata = {
   title: 'Dashboard | Knowlix',
@@ -26,7 +27,7 @@ function getInitials(name: string) {
 }
 
 export default async function DashboardPage() {
-  const user = await requireUser()
+  const user = await requireInstitutionUser()
 
   const userInstitution = user.institutionId
     ? await db
@@ -55,7 +56,7 @@ export default async function DashboardPage() {
     ? await db
         .select()
         .from(resource)
-        .where(inArray(resource.id, savedResourceIds))
+        .where(and(inArray(resource.id, savedResourceIds), eq(resource.institutionId, user.institutionId)))
         .orderBy(desc(resource.createdAt))
     : []
 
@@ -109,14 +110,15 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-muted/30">
+    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-muted/30">
+      <AmbientBackdrop className="opacity-80" variant="default" />
       <DashboardNav
         name={user.name}
         email={user.email}
         initials={getInitials(user.name)}
       />
 
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">
+      <main className="relative mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">
         <div className="flex flex-col gap-10">
           <Welcome
             name={user.name}
@@ -124,10 +126,15 @@ export default async function DashboardPage() {
             reputation={user.reputation}
           />
 
-          <div className="flex flex-col gap-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Quick actions
-            </h2>
+          <div className="flex flex-col gap-4 rounded-[1.75rem] border border-border/70 bg-card/80 p-5 shadow-sm backdrop-blur-sm">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                Quick actions
+              </h2>
+              <span className="rounded-full border border-border/70 bg-background/70 px-3 py-1 text-xs font-medium text-muted-foreground">
+                Personalized workspace
+              </span>
+            </div>
             <QuickActions />
           </div>
 
@@ -148,7 +155,7 @@ export default async function DashboardPage() {
             resources={savedResources}
           />
 
-          <section id="request-material" className="rounded-3xl border border-border bg-card p-6">
+          <section id="request-material" className="rounded-[1.75rem] border border-border/70 bg-card/85 p-6 shadow-sm backdrop-blur-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-xl font-semibold tracking-tight text-foreground">

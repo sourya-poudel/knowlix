@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { signUp } from '@/lib/auth-client'
+import { Badge } from '@/components/ui/badge'
 import {
   INSTITUTIONS,
   getInstitution,
@@ -30,6 +31,7 @@ export function SignupForm() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const bootstrapEmail = process.env.NEXT_PUBLIC_ADMIN_BOOTSTRAP_EMAIL?.toLowerCase() ?? ''
 
   const institution = useMemo(
     () => getInstitution(institutionId),
@@ -56,7 +58,7 @@ export function SignupForm() {
     e.preventDefault()
 
     const normalizedEmail = email.trim().toLowerCase()
-    const isAdminEmail = normalizedEmail === 'admin@sourya.com'
+    const isAdminEmail = bootstrapEmail && normalizedEmail === bootstrapEmail
 
     if (!isAdminEmail && !institution) {
       toast.error('Please select your institution.')
@@ -93,10 +95,6 @@ export function SignupForm() {
       payload.institutionId = institution.id
     }
 
-    if (isAdminEmail) {
-      payload.role = 'admin'
-    }
-
     const res = await signUp.email(payload)
 
     if (res.error) {
@@ -106,7 +104,7 @@ export function SignupForm() {
     }
 
     // If admin, set the admin role
-    if (normalizedEmail === 'admin@sourya.com') {
+    if (isAdminEmail) {
       try {
         await fetch('/api/set-admin-role', { method: 'POST' })
       } catch (err) {
@@ -115,7 +113,7 @@ export function SignupForm() {
     }
 
     toast.success('Account created! Welcome to Knowlix.')
-    if (normalizedEmail === 'admin@sourya.com') {
+    if (isAdminEmail) {
       router.push('/admin')
     } else {
       router.push('/dashboard')
@@ -125,6 +123,20 @@ export function SignupForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <Badge className="border-primary/15 bg-primary/8 text-primary" variant="secondary">
+            Create account
+          </Badge>
+          <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+            Institution verified
+          </span>
+        </div>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
+          Select your institution, verify your domain, and join the campus community with a student role.
+        </p>
+      </div>
+
       <div className="flex flex-col gap-2">
         <Label htmlFor="name">Full name</Label>
         <Input
@@ -138,7 +150,7 @@ export function SignupForm() {
         />
       </div>
 
-      {email.trim().toLowerCase() !== 'admin@sourya.com' ? (
+      {!(bootstrapEmail && email.trim().toLowerCase() === bootstrapEmail) ? (
         <div className="flex flex-col gap-2">
           <Label htmlFor="institution">Institution</Label>
           <Select
@@ -160,7 +172,7 @@ export function SignupForm() {
           </Select>
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-muted p-4 text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-border/70 bg-muted/70 p-4 text-sm text-muted-foreground">
           Admin account detected. Institution selection is not required.
         </div>
       )}
@@ -220,10 +232,15 @@ export function SignupForm() {
         )}
       </div>
 
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading && <Loader2 className="size-4 animate-spin" />}
-        Create account
-      </Button>
+      <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-muted/50 p-4">
+        <Button type="submit" className="w-full shadow-sm shadow-primary/10" disabled={loading}>
+          {loading && <Loader2 className="size-4 animate-spin" />}
+          Create account
+        </Button>
+        <p className="text-center text-xs leading-5 text-muted-foreground">
+          Students only join through approved institutional domains.
+        </p>
+      </div>
 
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{' '}

@@ -20,7 +20,7 @@ export function ResourceSection({
   viewAllHref?: string
 }) {
   return (
-    <section id={id} className="flex flex-col gap-4">
+    <section id={id} className="flex flex-col gap-5">
       <div className="flex items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h2 className="text-xl font-semibold tracking-tight text-foreground">
@@ -41,7 +41,7 @@ export function ResourceSection({
         ) : null}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {resources.map((resource) => (
           <ResourceCard
             key={resource.id}

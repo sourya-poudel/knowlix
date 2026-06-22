@@ -2,12 +2,13 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { resource } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { getRequestUser } from '@/lib/session'
 
 export async function GET(req: Request) {
-  const session = await auth.api.getSession({ headers: req.headers })
-  if (!session?.user) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+  const user = await getRequestUser(req.headers)
+  if (!user) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
-  if (session.user.email?.toLowerCase() !== 'admin@sourya.com') {
+  if (!['moderator', 'admin'].includes(user.role)) {
     return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 })
   }
 

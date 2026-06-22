@@ -2,11 +2,16 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { user, notification } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { getRequestUser } from '@/lib/session'
 
 export async function POST(req: Request) {
-  const session = await auth.api.getSession({ headers: req.headers })
-  if (!session?.user || session.user.email?.toLowerCase() !== 'admin@sourya.com') {
+  const currentUser = await getRequestUser(req.headers)
+  if (!currentUser) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+  }
+
+  if (currentUser.role !== 'admin') {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 })
   }
 
   const body = await req.json().catch(() => ({}))

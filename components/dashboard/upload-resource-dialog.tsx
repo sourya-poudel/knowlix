@@ -7,9 +7,23 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { toast } from 'sonner'
 import { createResource } from '@/lib/resources'
+import { RESOURCE_TYPES } from '@/lib/constants'
 
 export function UploadResourceDialog({
   open,
@@ -20,6 +34,7 @@ export function UploadResourceDialog({
 }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [type, setType] = useState('notes')
   const [courseCode, setCourseCode] = useState('')
   const [courseName, setCourseName] = useState('')
   const [semester, setSemester] = useState('')
@@ -35,7 +50,7 @@ export function UploadResourceDialog({
       await createResource({
         title,
         description,
-        type: 'notes',
+        type,
         courseCode,
         courseName,
         semester,
@@ -46,6 +61,7 @@ export function UploadResourceDialog({
       onOpenChange(false)
       setTitle('')
       setDescription('')
+      setType('notes')
       setCourseCode('')
       setCourseName('')
       setSemester('')
@@ -68,6 +84,21 @@ export function UploadResourceDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="resource-type">Resource type</Label>
+            <Select value={type} onValueChange={(value) => setType(String(value ?? 'notes'))}>
+              <SelectTrigger id="resource-type" className="w-full">
+                <SelectValue placeholder="Select a resource type" />
+              </SelectTrigger>
+              <SelectContent>
+                {RESOURCE_TYPES.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="grid gap-2">
             <Label htmlFor="resource-title">Title</Label>
             <Input

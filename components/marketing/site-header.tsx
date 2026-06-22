@@ -17,16 +17,16 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false)
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+    <header className="sticky top-0 z-50 w-full border-b border-border/70 bg-background/70 backdrop-blur-xl">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
         <BrandLogo />
 
-        <nav className="hidden items-center gap-8 md:flex" aria-label="Primary">
+        <nav className="hidden items-center gap-2 rounded-full border border-border/70 bg-background/75 px-2 py-1 md:flex" aria-label="Primary">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-full px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               {link.label}
             </Link>
@@ -49,7 +49,7 @@ export function SiteHeader() {
               </Button>
             }
           />
-          <SheetContent side="right" className="w-72">
+          <SheetContent side="right" className="w-80 border-l border-border/70 bg-background/95 backdrop-blur-xl">
             <SheetTitle className="sr-only">Menu</SheetTitle>
             <div className="mt-2 flex flex-col gap-6">
               <BrandLogo />
