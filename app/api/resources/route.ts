@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { resource as resourceTable } from '@/lib/db/schema'
 import { user as userTable } from '@/lib/db/schema'
+import { legacyUserColumns } from '@/lib/user-compat'
 import { BlobServiceClient } from '@azure/storage-blob'
 import path from 'node:path'
 import { RESOURCE_TYPES } from '@/lib/constants'
@@ -12,7 +13,7 @@ export async function POST(req: Request) {
   if (!session?.user) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
   const currentUserRows = await db
-    .select()
+    .select(legacyUserColumns)
     .from(userTable)
     .where(eq(userTable.id, session.user.id))
     .limit(1)
@@ -120,7 +121,7 @@ export async function GET(req: Request) {
   const userId = url.searchParams.get('userId')
 
   const currentUserRows = await db
-    .select()
+    .select(legacyUserColumns)
     .from(userTable)
     .where(eq(userTable.id, session.user.id))
     .limit(1)

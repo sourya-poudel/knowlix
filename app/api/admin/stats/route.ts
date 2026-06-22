@@ -17,7 +17,7 @@ export async function GET() {
 
     const allResources = await db.select().from(resource)
     const allInstitutions = await db.select().from(institution)
-    const allUsers = await db.select().from(userTable)
+    const totalUsersRows = await db.select({ count: sql<number>`count(*)::int` }).from(userTable)
 
     const pending = allResources.filter((item) => item.status === 'pending').length
     const approved = allResources.filter((item) => item.status === 'approved').length
@@ -73,7 +73,7 @@ export async function GET() {
       pending,
       approved,
       rejected,
-      totalUsers: allUsers.length,
+      totalUsers: totalUsersRows[0]?.count ?? 0,
       activeUsers: activeUsers[0]?.count ?? 0,
       totalInstitutions: allInstitutions.length,
       approvedInstitutions,

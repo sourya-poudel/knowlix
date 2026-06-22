@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { resource, user as userTable } from '@/lib/db/schema'
+import { legacyUserColumns } from '@/lib/user-compat'
 import { eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 
@@ -13,7 +14,7 @@ export async function GET(req: Request) {
     }
 
     const appUser = await db
-      .select()
+      .select(legacyUserColumns)
       .from(userTable)
       .where(eq(userTable.id, session.user.id))
       .limit(1)

@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { user as userTable } from '@/lib/db/schema'
+import { legacyUserColumns, type LegacyUserRow } from '@/lib/user-compat'
 import { hasRoleAccess, type AppRole } from '@/lib/access'
 import { eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
@@ -8,18 +9,48 @@ import { redirect } from 'next/navigation'
 
 export type AppUser = typeof userTable.$inferSelect
 
+function withActiveDefaults(user: LegacyUserRow) {
+  return {
+    ...user,
+    status: 'active',
+    suspendedReason: null,
+    suspendedAt: null,
+    suspendedBy: null,
+  } as AppUser
+}
+
+async function loadUserById(userId: string): Promise<AppUser | null> {
+  try {
+    const rows = await db
+      .select()
+      .from(userTable)
+      .where(eq(userTable.id, userId))
+      .limit(1)
+    const user = rows[0] ?? null
+    if (!user) return null
+    if (user.status === 'suspended') return null
+    return user
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    if (!message.includes('does not exist')) {
+      throw error
+    }
+
+    const rows = await db
+      .select(legacyUserColumns)
+      .from(userTable)
+      .where(eq(userTable.id, userId))
+      .limit(1)
+    const legacyUser = rows[0] ?? null
+    return legacyUser ? withActiveDefaults(legacyUser) : null
+  }
+}
+
 /** Returns the full app user row, or null if not signed in. */
 export async function getCurrentUser(): Promise<AppUser | null> {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) return null
-  const rows = await db
-    .select()
-    .from(userTable)
-    .where(eq(userTable.id, session.user.id))
-    .limit(1)
-  const user = rows[0] ?? null
-  if (!user || user.status === 'suspended') return null
-  return user
+  return loadUserById(session.user.id)
 }
 
 /** Requires an authenticated user. Redirects to sign-in otherwise. */
@@ -40,16 +71,7 @@ export async function getUserId(): Promise<string> {
 export async function getRequestUser(requestHeaders: Headers): Promise<AppUser | null> {
   const session = await auth.api.getSession({ headers: requestHeaders })
   if (!session?.user) return null
-
-  const rows = await db
-    .select()
-    .from(userTable)
-    .where(eq(userTable.id, session.user.id))
-    .limit(1)
-
-  const user = rows[0] ?? null
-  if (!user || user.status === 'suspended') return null
-  return user
+  return loadUserById(session.user.id)
 }
 
 /** Throws when the current request user is missing or lacks the required role. */

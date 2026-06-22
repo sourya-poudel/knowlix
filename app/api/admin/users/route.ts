@@ -2,6 +2,7 @@ import { db } from '@/lib/db'
 import { auditLog, comment, resource, session, user as userTable } from '@/lib/db/schema'
 import { and, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm'
 import { getRequestUser } from '@/lib/session'
+import { legacyUserColumns } from '@/lib/user-compat'
 import { recordAuditLog } from '@/lib/admin-audit'
 
 export async function GET(req: Request) {
@@ -20,25 +21,53 @@ export async function GET(req: Request) {
     conditions.push(or(ilike(userTable.name, pattern), ilike(userTable.email, pattern))!)
   }
   if (role) conditions.push(eq(userTable.role, role))
-  if (status) conditions.push(eq(userTable.status, status))
 
-  const users = await db
-    .select({
-      id: userTable.id,
-      name: userTable.name,
-      email: userTable.email,
-      role: userTable.role,
-      status: userTable.status,
-      bio: userTable.bio,
-      reputation: userTable.reputation,
-      institutionId: userTable.institutionId,
-      createdAt: userTable.createdAt,
-      suspendedReason: userTable.suspendedReason,
-      suspendedAt: userTable.suspendedAt,
-    })
-    .from(userTable)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(userTable.createdAt))
+  const modernConditions = [...conditions]
+  if (status && status !== 'active') {
+    return Response.json([])
+  }
+  if (status === 'active') {
+    modernConditions.push(sql`true`)
+  }
+
+  let users
+  try {
+    users = await db
+      .select({
+        id: userTable.id,
+        name: userTable.name,
+        email: userTable.email,
+        role: userTable.role,
+        status: userTable.status,
+        bio: userTable.bio,
+        reputation: userTable.reputation,
+        institutionId: userTable.institutionId,
+        createdAt: userTable.createdAt,
+        suspendedReason: userTable.suspendedReason,
+        suspendedAt: userTable.suspendedAt,
+      })
+      .from(userTable)
+      .where(modernConditions.length > 0 ? and(...modernConditions) : undefined)
+      .orderBy(desc(userTable.createdAt))
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    if (!message.includes('does not exist')) {
+      throw error
+    }
+
+    const legacyUsers = await db
+      .select(legacyUserColumns)
+      .from(userTable)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(userTable.createdAt))
+
+    users = legacyUsers.map((user) => ({
+      ...user,
+      status: 'active',
+      suspendedReason: null,
+      suspendedAt: null,
+    }))
+  }
 
   const uploadCounts = await db
     .select({ userId: resource.userId, uploadCount: sql<number>`count(*)::int` })
@@ -82,7 +111,7 @@ export async function PATCH(req: Request) {
     return Response.json({ error: 'userId and action are required' }, { status: 400 })
   }
 
-  const targetRows = await db.select().from(userTable).where(eq(userTable.id, userId)).limit(1)
+  const targetRows = await db.select(legacyUserColumns).from(userTable).where(eq(userTable.id, userId)).limit(1)
   const target = targetRows[0]
   if (!target) {
     return Response.json({ error: 'User not found' }, { status: 404 })
@@ -129,16 +158,27 @@ export async function PATCH(req: Request) {
   }
 
   if (action === 'suspend') {
-    await db
-      .update(userTable)
-      .set({
-        status: 'suspended',
-        suspendedReason: reason,
-        suspendedAt: new Date(),
-        suspendedBy: currentUser.id,
-        updatedAt: new Date(),
-      })
-      .where(eq(userTable.id, userId))
+    try {
+      await db
+        .update(userTable)
+        .set({
+          status: 'suspended',
+          suspendedReason: reason,
+          suspendedAt: new Date(),
+          suspendedBy: currentUser.id,
+          updatedAt: new Date(),
+        })
+        .where(eq(userTable.id, userId))
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (message.includes('does not exist')) {
+        return Response.json(
+          { error: 'User suspension requires the Phase 3 database migration' },
+          { status: 409 },
+        )
+      }
+      throw error
+    }
     await recordAuditLog({
       actorId: currentUser.id,
       actorRole: currentUser.role,
@@ -152,16 +192,27 @@ export async function PATCH(req: Request) {
   }
 
   if (action === 'reinstate') {
-    await db
-      .update(userTable)
-      .set({
-        status: 'active',
-        suspendedReason: null,
-        suspendedAt: null,
-        suspendedBy: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(userTable.id, userId))
+    try {
+      await db
+        .update(userTable)
+        .set({
+          status: 'active',
+          suspendedReason: null,
+          suspendedAt: null,
+          suspendedBy: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(userTable.id, userId))
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (message.includes('does not exist')) {
+        return Response.json(
+          { error: 'User reinstatement requires the Phase 3 database migration' },
+          { status: 409 },
+        )
+      }
+      throw error
+    }
     await recordAuditLog({
       actorId: currentUser.id,
       actorRole: currentUser.role,
