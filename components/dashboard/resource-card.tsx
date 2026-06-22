@@ -75,6 +75,16 @@ export function ResourceCard({
           {' \u00B7 '}
           {resource.courseName}
         </p>
+        {resource.fileUrl ? (
+          <a
+            href={resource.fileUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            Download attachment
+          </a>
+        ) : null}
       </div>
 
       <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-3 text-xs text-muted-foreground">

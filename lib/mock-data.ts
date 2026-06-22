@@ -14,7 +14,10 @@ export type MockResource = {
   courseCode: string
   courseName: string
   uploaderName: string
+  fileUrl?: string
+  fileName?: string
   fileSize: number
+  fileType?: string
   upvoteCount: number
   downloadCount: number
   viewCount: number

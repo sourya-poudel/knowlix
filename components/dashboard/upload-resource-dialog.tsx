@@ -24,6 +24,7 @@ export function UploadResourceDialog({
   const [courseName, setCourseName] = useState('')
   const [semester, setSemester] = useState('')
   const [year, setYear] = useState('')
+  const [file, setFile] = useState<File | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -39,6 +40,7 @@ export function UploadResourceDialog({
         courseName,
         semester,
         year: year ? Number(year) : null,
+        file,
       })
       toast.success('Resource uploaded')
       onOpenChange(false)
@@ -48,6 +50,7 @@ export function UploadResourceDialog({
       setCourseName('')
       setSemester('')
       setYear('')
+      setFile(null)
     } catch (error) {
       toast.error('Unable to upload resource')
     } finally {
@@ -121,6 +124,21 @@ export function UploadResourceDialog({
                 onChange={(event) => setYear(event.target.value)}
               />
             </div>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="resource-file">Attach file</Label>
+            <Input
+              id="resource-file"
+              type="file"
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md"
+              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            />
+            {file ? (
+              <div className="rounded-lg border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+                <div className="font-medium text-foreground">{file.name}</div>
+                <div>{(file.size / 1024).toFixed(1)} KB</div>
+              </div>
+            ) : null}
           </div>
           <div className="flex items-center gap-2 pt-4">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { signOut } from '@/lib/auth-client'
 import { BrandLogo } from '@/components/brand-logo'
 import { Button } from '@/components/ui/button'
+import { NotificationPanel } from '@/components/dashboard/notification-panel'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -51,6 +52,8 @@ export function DashboardNav({
           <Button variant="ghost" size="icon" aria-label="Search" className="hidden sm:inline-flex">
             <Search className="size-4" />
           </Button>
+
+          <NotificationPanel />
 
           <DropdownMenu>
             <DropdownMenuTrigger

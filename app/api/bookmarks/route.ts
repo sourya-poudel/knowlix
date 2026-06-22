@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm/sql'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { bookmark as bookmarkTable } from '@/lib/db/schema'
@@ -42,8 +42,7 @@ export async function DELETE(req: Request) {
     }
 
     await db.delete(bookmarkTable).where(
-      eq(bookmarkTable.resourceId, resourceId),
-      eq(bookmarkTable.userId, session.user.id)
+      and(eq(bookmarkTable.resourceId, resourceId), eq(bookmarkTable.userId, session.user.id))
     )
 
     return new Response(JSON.stringify({ success: true }), { status: 200 })

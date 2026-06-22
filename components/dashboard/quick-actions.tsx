@@ -7,7 +7,7 @@ const ACTIONS = [
     title: 'Explore library',
     description: 'Browse uploaded and bookmarked resources',
     icon: Compass,
-    href: '#uploads',
+    href: '/resources',
   },
   {
     title: 'Saved resources',
