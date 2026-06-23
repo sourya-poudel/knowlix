@@ -6,10 +6,12 @@ export const auth = betterAuth({
   database: pool,
   secret: process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET,
   baseURL:
-    process.env.BETTER_AUTH_URL ??
-    process.env.APP_URL ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    'http://localhost:3000',
+    process.env.BETTER_AUTH_URL ||
+    process.env.APP_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.NODE_ENV === 'production'
+      ? 'https://knowlix-web.vercel.app'
+      : 'http://localhost:3000'),
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
@@ -41,8 +43,8 @@ export const auth = betterAuth({
     },
   },
   trustedOrigins: [
-    ...(process.env.APP_URL ? [process.env.APP_URL] : []),
-    ...(process.env.NEXT_PUBLIC_APP_URL ? [process.env.NEXT_PUBLIC_APP_URL] : []),
+    'http://localhost:3000',
+    'https://knowlix-web.vercel.app',
   ],
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
