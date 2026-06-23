@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2 } from 'lucide-react'
 import { ResourceSection } from '@/components/dashboard/resource-section'
+import { Skeleton } from '@/components/ui/skeleton'
 import type { MockResource } from '@/lib/mock-data'
 
 function toMockResource(item: Record<string, unknown>): MockResource {
@@ -28,43 +28,60 @@ function toMockResource(item: Record<string, unknown>): MockResource {
   }
 }
 
+function SectionSkeleton() {
+  return (
+    <div className="space-y-4">
+      <Skeleton className="h-6 w-48" />
+      <Skeleton className="h-4 w-72" />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Skeleton key={index} className="h-44 rounded-3xl" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function RecommendationSections() {
-  const [popular, setPopular] = useState<MockResource[]>([])
-  const [trending, setTrending] = useState<MockResource[]>([])
-  const [recommended, setRecommended] = useState<MockResource[]>([])
-  const [loading, setLoading] = useState(true)
+  const [popular, setPopular] = useState<MockResource[] | null>(null)
+  const [trending, setTrending] = useState<MockResource[] | null>(null)
+  const [recommended, setRecommended] = useState<MockResource[] | null>(null)
 
   useEffect(() => {
-    async function load() {
+    async function loadMode(mode: string, setter: (items: MockResource[]) => void) {
       try {
-        const [popularRes, trendingRes, recommendedRes] = await Promise.all([
-          fetch('/api/resources/search?mode=popular'),
-          fetch('/api/resources/search?mode=trending'),
-          fetch('/api/resources/search?mode=recommended'),
-        ])
-
-        if (popularRes.ok) setPopular((await popularRes.json()).map(toMockResource))
-        if (trendingRes.ok) setTrending((await trendingRes.json()).map(toMockResource))
-        if (recommendedRes.ok) setRecommended((await recommendedRes.json()).map(toMockResource))
-      } finally {
-        setLoading(false)
+        const res = await fetch(`/api/resources/search?mode=${mode}`)
+        if (res.ok) {
+          const data = await res.json()
+          setter(data.map(toMockResource))
+        } else {
+          setter([])
+        }
+      } catch {
+        setter([])
       }
     }
-    load()
+
+    void loadMode('recommended', setRecommended)
+    void loadMode('trending', setTrending)
+    void loadMode('popular', setPopular)
   }, [])
 
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 rounded-2xl border border-dashed p-8 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" />
-        Loading recommendations...
-      </div>
-    )
-  }
+  const hasAny =
+    (recommended?.length ?? 0) > 0 ||
+    (trending?.length ?? 0) > 0 ||
+    (popular?.length ?? 0) > 0
+
+  const allLoaded =
+    recommended !== null && trending !== null && popular !== null
+
+  if (allLoaded && !hasAny) return null
 
   return (
     <div className="flex flex-col gap-10">
-      {recommended.length > 0 ? (
+      {recommended === null ? (
+        <SectionSkeleton />
+      ) : recommended.length > 0 ? (
         <ResourceSection
           title="Recommended for you"
           description="Based on your bookmarks and campus activity."
@@ -72,7 +89,10 @@ export function RecommendationSections() {
           viewAllHref="/resources"
         />
       ) : null}
-      {trending.length > 0 ? (
+
+      {trending === null ? (
+        <SectionSkeleton />
+      ) : trending.length > 0 ? (
         <ResourceSection
           title="Trending this week"
           description="Resources gaining attention across your institution."
@@ -80,7 +100,10 @@ export function RecommendationSections() {
           viewAllHref="/resources"
         />
       ) : null}
-      {popular.length > 0 ? (
+
+      {popular === null ? (
+        <SectionSkeleton />
+      ) : popular.length > 0 ? (
         <ResourceSection
           title="Popular resources"
           description="Most downloaded and upvoted materials on campus."

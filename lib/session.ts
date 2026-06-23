@@ -97,8 +97,14 @@ export async function requireRole(
 }
 
 /** Requires a signed-in user who belongs to an institution. */
-export async function requireInstitutionUser(): Promise<AppUser & { institutionId: string }> {
+export async function requireInstitutionUser(): Promise<AppUser> {
   const u = await requireUser()
-  if (!u.institutionId) redirect('/signup')
-  return u as AppUser & { institutionId: string }
+
+  if (hasRoleAccess(u.role, ['admin', 'moderator'])) {
+    return u
+  }
+
+  if (!u.institutionId) redirect('/onboarding')
+
+  return u
 }

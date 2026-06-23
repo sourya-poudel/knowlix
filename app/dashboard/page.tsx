@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { AppShell } from '@/components/layout/app-shell'
@@ -7,7 +8,7 @@ import { StatCards } from '@/components/dashboard/stat-cards'
 import { QuickActions } from '@/components/dashboard/quick-actions'
 import { ResourceSection } from '@/components/dashboard/resource-section'
 import { RecommendationSections } from '@/components/resources/recommendation-sections'
-import { requireInstitutionUser } from '@/lib/session'
+import { requireUser } from '@/lib/session'
 import { db } from '@/lib/db'
 import { bookmark, institution, resource, user } from '@/lib/db/schema'
 import { and, desc, eq, inArray } from 'drizzle-orm'
@@ -19,38 +20,58 @@ export const metadata: Metadata = {
 }
 
 export default async function DashboardPage() {
-  const currentUser = await requireInstitutionUser()
+  const currentUser = await requireUser()
 
-  const userInstitution = currentUser.institutionId
-    ? await db
-        .select()
-        .from(institution)
-        .where(eq(institution.id, currentUser.institutionId))
-        .limit(1)
-        .then((rows) => rows[0])
-    : null
+  if (currentUser.role === 'admin') {
+    redirect('/admin')
+  }
 
-  const uploads = await db
-    .select()
-    .from(resource)
-    .where(eq(resource.userId, currentUser.id))
-    .orderBy(desc(resource.createdAt))
+  if (currentUser.role === 'moderator') {
+    redirect('/moderator')
+  }
 
-  const savedBookmarks = await db
-    .select({ resourceId: bookmark.resourceId })
-    .from(bookmark)
-    .where(eq(bookmark.userId, currentUser.id))
+  const [userInstitution, uploads, savedBookmarks] = await Promise.all([
+    currentUser.institutionId
+      ? db
+          .select()
+          .from(institution)
+          .where(eq(institution.id, currentUser.institutionId))
+          .limit(1)
+          .then((rows) => rows[0] ?? null)
+      : Promise.resolve(null),
+    db
+      .select()
+      .from(resource)
+      .where(eq(resource.userId, currentUser.id))
+      .orderBy(desc(resource.createdAt)),
+    db
+      .select({ resourceId: bookmark.resourceId })
+      .from(bookmark)
+      .where(eq(bookmark.userId, currentUser.id)),
+  ])
 
   const bookmarkedResourceIds = new Set(savedBookmarks.map((bookmarkRow) => bookmarkRow.resourceId))
   const savedResourceIds = savedBookmarks.map((bookmarkRow) => bookmarkRow.resourceId)
 
-  const savedResourcesRows = savedResourceIds.length
-    ? await db
-        .select()
-        .from(resource)
-        .where(and(inArray(resource.id, savedResourceIds), eq(resource.institutionId, currentUser.institutionId)))
-        .orderBy(desc(resource.createdAt))
-    : []
+  const savedResourcesRows =
+    savedResourceIds.length && currentUser.institutionId
+      ? await db
+          .select()
+          .from(resource)
+          .where(
+            and(
+              inArray(resource.id, savedResourceIds),
+              eq(resource.institutionId, currentUser.institutionId),
+            ),
+          )
+          .orderBy(desc(resource.createdAt))
+      : savedResourceIds.length
+        ? await db
+            .select()
+            .from(resource)
+            .where(inArray(resource.id, savedResourceIds))
+            .orderBy(desc(resource.createdAt))
+        : []
 
   const uploaderRows = savedResourcesRows.length
     ? await db

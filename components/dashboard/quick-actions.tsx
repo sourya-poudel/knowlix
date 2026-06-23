@@ -33,8 +33,8 @@ export function QuickActions() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {ACTIONS.map((action) => (
-        <Link key={action.title} href={action.href} className="group block rounded-3xl transition-all hover:-translate-y-0.5 hover:shadow-xl">
-          <Card className="cursor-pointer p-6 transition-colors hover:border-primary/40 hover:bg-muted/40">
+        <Link key={action.title} href={action.href} className="group block rounded-3xl transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-lg">
+          <Card className="cursor-pointer p-6 transition-colors duration-150 hover:border-primary/40 hover:bg-muted/40">
             <div className="flex items-center justify-between gap-4">
               <span className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                 <action.icon className="size-5" aria-hidden="true" />

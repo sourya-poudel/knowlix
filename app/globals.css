@@ -213,7 +213,12 @@
   }
 
   .knowlix-loading-bar {
-    animation: knowlix-loading-bar 1.8s ease-in-out infinite;
+    animation: knowlix-loading-bar 0.9s ease-in-out infinite;
+  }
+
+  .knowlix-instant {
+    transition-duration: 120ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
@@ -231,14 +236,14 @@
 
 @keyframes knowlix-loading-bar {
   0% {
-    transform: translateX(-40%);
-    opacity: 0.6;
+    transform: translateX(-60%);
+    opacity: 0.5;
   }
   50% {
     opacity: 1;
   }
   100% {
-    transform: translateX(140%);
-    opacity: 0.6;
+    transform: translateX(160%);
+    opacity: 0.5;
   }
 }

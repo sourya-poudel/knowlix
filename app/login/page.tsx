@@ -9,10 +9,7 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <AuthShell
-      title="Welcome back"
-      subtitle="Sign in to access your campus knowledge library."
-    >
+    <AuthShell title="Welcome back" subtitle="Sign in to your Knowlix workspace.">
       <LoginForm />
     </AuthShell>
   )

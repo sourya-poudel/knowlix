@@ -3,10 +3,11 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { signUp } from '@/lib/auth-client'
-import { Badge } from '@/components/ui/badge'
+import { getPostAuthPath } from '@/lib/auth-routing'
+import { isPublicAdminEmail } from '@/lib/admin-emails'
 import {
   INSTITUTIONS,
   getInstitution,
@@ -23,42 +24,53 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
+async function resolvePostSignupPath(): Promise<string> {
+  try {
+    await fetch('/api/set-admin-role', { method: 'POST' })
+    const res = await fetch('/api/me', { cache: 'no-store' })
+    if (res.ok) {
+      const profile = await res.json()
+      return getPostAuthPath(profile.role)
+    }
+  } catch {
+    // Fall back to dashboard if profile lookup fails.
+  }
+  return '/dashboard'
+}
+
 export function SignupForm() {
   const router = useRouter()
+
   const [name, setName] = useState('')
   const [institutionId, setInstitutionId] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const bootstrapEmail = process.env.NEXT_PUBLIC_ADMIN_BOOTSTRAP_EMAIL?.toLowerCase() ?? ''
 
-  const institution = useMemo(
-    () => getInstitution(institutionId),
-    [institutionId],
+  const normalizedEmail = email.trim().toLowerCase()
+  const isAdminEmail = useMemo(
+    () => (normalizedEmail ? isPublicAdminEmail(normalizedEmail) : false),
+    [normalizedEmail],
   )
 
-  // Live institutional-email validation against the selected institution's domain.
+  const institution = useMemo(() => getInstitution(institutionId), [institutionId])
+
   const emailError = useMemo(() => {
-    if (!email || !institution) return null
+    if (isAdminEmail || !email || !institution) return null
     return emailMatchesInstitution(email, institution)
       ? null
       : `Use your @${institution.domain} email address`
-  }, [email, institution])
+  }, [email, institution, isAdminEmail])
 
   const passwordError = useMemo(() => {
-    if (password && password.length < 8)
-      return 'Password must be at least 8 characters'
-    if (confirmPassword && password !== confirmPassword)
-      return 'Passwords do not match'
+    if (password && password.length < 8) return 'Password must be at least 8 characters'
+    if (confirmPassword && password !== confirmPassword) return 'Passwords do not match'
     return null
   }, [password, confirmPassword])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-
-    const normalizedEmail = email.trim().toLowerCase()
-    const isAdminEmail = bootstrapEmail && normalizedEmail === bootstrapEmail
 
     if (!isAdminEmail && !institution) {
       toast.error('Please select your institution.')
@@ -79,23 +91,18 @@ export function SignupForm() {
 
     setLoading(true)
 
-    const payload: any = {
+    const payload: Record<string, string> = {
       name,
-      email,
+      email: email.trim(),
       password,
-      callbackURL: isAdminEmail ? '/admin' : '/dashboard',
+      callbackURL: '/dashboard',
     }
 
-    if (!isAdminEmail) {
-      if (!institution) {
-        toast.error('Please select your institution.')
-        setLoading(false)
-        return
-      }
+    if (!isAdminEmail && institution) {
       payload.institutionId = institution.id
     }
 
-    const res = await signUp.email(payload)
+    const res = await signUp.email(payload as Parameters<typeof signUp.email>[0])
 
     if (res.error) {
       toast.error(res.error.message ?? 'Unable to create account. Please try again.')
@@ -103,144 +110,121 @@ export function SignupForm() {
       return
     }
 
-    // If admin, set the admin role
-    if (isAdminEmail) {
-      try {
-        await fetch('/api/set-admin-role', { method: 'POST' })
-      } catch (err) {
-        console.error('Failed to set admin role:', err)
-      }
-    }
-
-    toast.success('Account created! Welcome to Knowlix.')
-    if (isAdminEmail) {
-      router.push('/admin')
-    } else {
-      router.push('/dashboard')
-    }
+    const destination = await resolvePostSignupPath()
+    toast.success('Account created successfully.')
+    router.replace(destination)
     router.refresh()
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <Badge className="border-primary/15 bg-primary/8 text-primary" variant="secondary">
-            Create account
-          </Badge>
-          <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-            Institution verified
-          </span>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      {isAdminEmail ? (
+        <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+          <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Administrator account. Institution selection is not required.
+          </p>
         </div>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          Select your institution, verify your domain, and join the campus community with a student role.
-        </p>
-      </div>
+      ) : null}
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="name">Full name</Label>
-        <Input
-          id="name"
-          type="text"
-          autoComplete="name"
-          placeholder="Jane Doe"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-      </div>
-
-      {!(bootstrapEmail && email.trim().toLowerCase() === bootstrapEmail) ? (
+      <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="institution">Institution</Label>
-          <Select
-            value={institutionId}
-            onValueChange={(value) => setInstitutionId(value ?? '')}
-          >
-            <SelectTrigger id="institution" className="w-full">
-              <SelectValue>
-                {institution ? institution.name : 'Select your university'}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {INSTITUTIONS.map((inst) => (
-                <SelectItem key={inst.id} value={inst.id}>
-                  {inst.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="name">Full name</Label>
+          <Input
+            id="name"
+            type="text"
+            autoComplete="name"
+            placeholder="Jane Doe"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            disabled={loading}
+          />
         </div>
-      ) : (
-        <div className="rounded-2xl border border-border/70 bg-muted/70 p-4 text-sm text-muted-foreground">
-          Admin account detected. Institution selection is not required.
+
+        {!isAdminEmail ? (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="institution">Institution</Label>
+            <Select
+              value={institutionId}
+              onValueChange={(value) => setInstitutionId(value ?? '')}
+              disabled={loading}
+            >
+              <SelectTrigger id="institution" className="w-full">
+                <SelectValue>
+                  {institution ? institution.name : 'Select your university'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {INSTITUTIONS.map((inst) => (
+                  <SelectItem key={inst.id} value={inst.id}>
+                    {inst.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="email">{isAdminEmail ? 'Email' : 'Institutional email'}</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder={
+              institution && !isAdminEmail ? `you@${institution.domain}` : 'you@university.edu'
+            }
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            aria-invalid={!!emailError}
+            required
+            disabled={loading}
+          />
+          {emailError ? (
+            <p className="text-xs text-destructive">{emailError}</p>
+          ) : institution && !isAdminEmail ? (
+            <p className="text-xs text-muted-foreground">Must end in @{institution.domain}</p>
+          ) : null}
         </div>
-      )}
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="email">Institutional email</Label>
-        <Input
-          id="email"
-          type="email"
-          autoComplete="email"
-          placeholder={
-            institution ? `you@${institution.domain}` : 'you@university.edu'
-          }
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          aria-invalid={!!emailError}
-          required
-        />
-        {emailError ? (
-          <p className="text-xs text-destructive">{emailError}</p>
-        ) : (
-          institution && (
-            <p className="text-xs text-muted-foreground">
-              Must end in @{institution.domain}
-            </p>
-          )
-        )}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="new-password"
+              placeholder="At least 8 characters"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="confirmPassword">Confirm</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              autoComplete="new-password"
+              placeholder="Re-enter password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              aria-invalid={!!passwordError}
+              required
+              disabled={loading}
+            />
+          </div>
+        </div>
+        {passwordError ? <p className="text-xs text-destructive">{passwordError}</p> : null}
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          type="password"
-          autoComplete="new-password"
-          placeholder="At least 8 characters"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="confirmPassword">Confirm password</Label>
-        <Input
-          id="confirmPassword"
-          type="password"
-          autoComplete="new-password"
-          placeholder="Re-enter your password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          aria-invalid={!!passwordError}
-          required
-        />
-        {passwordError && (
-          <p className="text-xs text-destructive">{passwordError}</p>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-muted/50 p-4">
-        <Button type="submit" className="w-full shadow-sm shadow-primary/10" disabled={loading}>
-          {loading && <Loader2 className="size-4 animate-spin" />}
-          Create account
-        </Button>
-        <p className="text-center text-xs leading-5 text-muted-foreground">
-          Students only join through approved institutional domains.
-        </p>
-      </div>
+      <Button type="submit" className="h-11 w-full" disabled={loading}>
+        {loading ? <Loader2 className="size-4 animate-spin" /> : null}
+        {loading ? 'Creating account…' : 'Create account'}
+      </Button>
 
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{' '}

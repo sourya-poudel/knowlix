@@ -19,7 +19,7 @@ export async function GET(req: Request) {
       .where(eq(userTable.id, session.user.id))
       .limit(1)
 
-    if (!appUser[0] || appUser[0].role !== 'admin') {
+    if (!appUser[0] || !['admin', 'moderator'].includes(appUser[0].role)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 

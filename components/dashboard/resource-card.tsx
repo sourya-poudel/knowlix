@@ -41,18 +41,22 @@ export function ResourceCard({
   async function handleToggleBookmark(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
+
+    const next = !bookmarked
+    setBookmarked(next)
+
     try {
       await toggleBookmark(resource.id, bookmarked)
-      setBookmarked(!bookmarked)
-      toast.success(bookmarked ? 'Removed bookmark' : 'Bookmarked')
+      toast.success(next ? 'Bookmarked' : 'Removed bookmark')
     } catch {
+      setBookmarked(bookmarked)
       toast.error('Unable to update bookmark')
     }
   }
 
   return (
     <Link href={`/resources/${resource.id}`} className="group block">
-      <Card className="flex h-full flex-col gap-4 rounded-3xl border border-border/70 bg-card/95 p-5 shadow-sm transition-colors group-hover:border-primary/30 group-hover:shadow-md">
+      <Card className="flex h-full flex-col gap-4 rounded-3xl border border-border/70 bg-card/95 p-5 shadow-sm transition-[border-color,box-shadow] duration-150 group-hover:border-primary/30 group-hover:shadow-md">
         <div className="flex items-start justify-between gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-background text-secondary-foreground">
             <FileText className="size-5" aria-hidden="true" />

@@ -106,6 +106,13 @@ export function AdminDashboard({ showUsers = true }: { showUsers?: boolean }) {
   }
 
   async function updateStatus(resourceId: string, newStatus: 'approved' | 'rejected') {
+    const previous = resources
+    setResources((current) =>
+      current.map((item) =>
+        item.id === resourceId ? { ...item, status: newStatus } : item,
+      ),
+    )
+
     const res = await fetch('/api/admin/resource-status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -113,13 +120,13 @@ export function AdminDashboard({ showUsers = true }: { showUsers?: boolean }) {
     })
 
     if (!res.ok) {
+      setResources(previous)
       toast.error('Unable to update status')
       return
     }
 
     toast.success(`Resource ${newStatus}`)
-    await fetchStats()
-    await fetchResources(resourceTab, page)
+    void fetchStats()
   }
 
   const totalPages = Math.ceil(totalCount / pageSize)
@@ -128,7 +135,6 @@ export function AdminDashboard({ showUsers = true }: { showUsers?: boolean }) {
     <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6">
       {/* Header */}
       <div className="mb-8 overflow-hidden rounded-[2rem] border border-border/70 bg-card/90 p-8 shadow-sm shadow-slate-950/5">
-        <div className="absolute inset-x-0 top-0 h-24 bg-[linear-gradient(90deg,rgba(46,120,255,0.08),rgba(38,184,181,0.08))]" />
         <div className="relative flex flex-col gap-3">
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-primary">
             Platform administration

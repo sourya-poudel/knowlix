@@ -1,108 +1,110 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { signIn } from '@/lib/auth-client'
-import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
+import { getPostAuthPath } from '@/lib/auth-routing'
+import { isPublicAdminEmail } from '@/lib/admin-emails'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+
+async function resolvePostLoginPath(): Promise<string> {
+  try {
+    await fetch('/api/set-admin-role', { method: 'POST' })
+    const res = await fetch('/api/me', { cache: 'no-store' })
+    if (res.ok) {
+      const profile = await res.json()
+      return getPostAuthPath(profile.role)
+    }
+  } catch {
+    // Fall back to dashboard if profile lookup fails.
+  }
+  return '/dashboard'
+}
 
 export function LoginForm() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const bootstrapEmail = process.env.NEXT_PUBLIC_ADMIN_BOOTSTRAP_EMAIL?.toLowerCase() ?? ''
+
+  const normalizedEmail = email.trim().toLowerCase()
+  const isAdminLogin = useMemo(
+    () => (normalizedEmail ? isPublicAdminEmail(normalizedEmail) : false),
+    [normalizedEmail],
+  )
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
 
-    const normalizedEmail = email.trim().toLowerCase()
-    const callbackURL = normalizedEmail === bootstrapEmail ? '/admin' : '/dashboard'
-
     const res = await signIn.email({
-      email,
+      email: email.trim(),
       password,
-      callbackURL,
-    } as any)
+      callbackURL: '/dashboard',
+    } as Parameters<typeof signIn.email>[0])
 
     if (res.error) {
-      toast.error(res.error.message ?? 'Unable to sign in. Please try again.')
+      toast.error(res.error.message ?? 'Unable to sign in. Check your email and password.')
       setLoading(false)
       return
     }
 
-    // Bootstrap the initial admin account without changing runtime authorization.
-    if (bootstrapEmail && normalizedEmail === bootstrapEmail) {
-      try {
-        await fetch('/api/set-admin-role', { method: 'POST' })
-      } catch (err) {
-        console.error('Failed to set admin role:', err)
-      }
-    }
-
-    toast.success('Welcome back!')
-    router.push(callbackURL)
+    const destination = await resolvePostLoginPath()
+    toast.success(isAdminLogin ? 'Welcome, administrator.' : 'Welcome back!')
+    router.replace(destination)
     router.refresh()
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <Badge className="border-primary/15 bg-primary/8 text-primary" variant="secondary">
-            Student access
-          </Badge>
-          <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-            Verified account only
-          </span>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      {isAdminLogin ? (
+        <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+          <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Administrator account detected. You&apos;ll be routed to the admin panel after sign-in.
+          </p>
         </div>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          Sign in to access your campus library, pending uploads, bookmarks, and moderator feedback.
-        </p>
+      ) : null}
+
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@university.edu"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={loading}
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            disabled={loading}
+          />
+        </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          type="email"
-          autoComplete="email"
-          placeholder="you@university.edu"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          placeholder="Enter your password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-      </div>
-
-      <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-muted/50 p-4">
-        <Button type="submit" className="w-full shadow-sm shadow-primary/10" disabled={loading}>
-          {loading && <Loader2 className="size-4 animate-spin" />}
-          Sign in
-        </Button>
-        <p className="text-center text-xs leading-5 text-muted-foreground">
-          Access is limited to approved institutional accounts.
-        </p>
-      </div>
+      <Button type="submit" className="h-11 w-full" disabled={loading}>
+        {loading ? <Loader2 className="size-4 animate-spin" /> : null}
+        {loading ? 'Signing in…' : 'Sign in'}
+      </Button>
 
       <p className="text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{' '}

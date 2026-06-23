@@ -91,7 +91,7 @@ export async function GET(req: Request) {
       ...u,
       uploadCount: uploadMap.get(u.id) ?? 0,
       commentCount: commentMap.get(u.id) ?? 0,
-      lastActiveAt: sessionMap.get(u.id)?.toISOString() ?? null,
+      lastActiveAt: sessionMap.get(u.id) ?? null,
     })),
   )
 }
@@ -119,6 +119,38 @@ export async function PATCH(req: Request) {
 
   if (target.id === currentUser.id) {
     return Response.json({ error: 'You cannot manage your own account from here' }, { status: 400 })
+  }
+
+  if (action === 'promoteAdmin') {
+    await db
+      .update(userTable)
+      .set({ role: 'admin', updatedAt: new Date() })
+      .where(eq(userTable.id, userId))
+    await recordAuditLog({
+      actorId: currentUser.id,
+      actorRole: currentUser.role,
+      action: 'admin_promoted',
+      entityType: 'user',
+      entityId: userId,
+      targetInstitutionId: target.institutionId,
+    })
+    return Response.json({ success: true })
+  }
+
+  if (action === 'removeAdmin') {
+    await db
+      .update(userTable)
+      .set({ role: 'student', updatedAt: new Date() })
+      .where(eq(userTable.id, userId))
+    await recordAuditLog({
+      actorId: currentUser.id,
+      actorRole: currentUser.role,
+      action: 'admin_removed',
+      entityType: 'user',
+      entityId: userId,
+      targetInstitutionId: target.institutionId,
+    })
+    return Response.json({ success: true })
   }
 
   if (action === 'promoteModerator' || action === 'assignModerator') {

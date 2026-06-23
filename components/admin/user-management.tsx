@@ -6,7 +6,16 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/input'
-import { Loader2, RefreshCw, Shield, ShieldOff, Search, UserX, UserCheck } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  RefreshCw,
+  Shield,
+  ShieldOff,
+  Search,
+  UserX,
+  UserCheck,
+  Crown,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 type AdminUser = {
@@ -52,9 +61,38 @@ export function UserManagement() {
     loadUsers()
   }, [])
 
+  function patchUser(userId: string, patch: Partial<AdminUser>) {
+    setItems((current) =>
+      current.map((item) => (item.id === userId ? { ...item, ...patch } : item)),
+    )
+  }
+
   async function handleAction(userId: string, action: string) {
-    const reason = action === 'suspend' ? window.prompt('Optional suspension reason') ?? undefined : undefined
+    const target = items.find((item) => item.id === userId)
+    if (!target) return
+
+    const reason =
+      action === 'suspend' ? (window.prompt('Optional suspension reason') ?? undefined) : undefined
+
+    const optimisticPatch: Partial<AdminUser> = {}
+    if (action === 'promoteAdmin') optimisticPatch.role = 'admin'
+    if (action === 'removeAdmin') optimisticPatch.role = 'student'
+    if (action === 'promoteModerator' || action === 'assignModerator')
+      optimisticPatch.role = 'moderator'
+    if (action === 'removeModerator') optimisticPatch.role = 'student'
+    if (action === 'suspend') {
+      optimisticPatch.status = 'suspended'
+      optimisticPatch.suspendedReason = reason ?? null
+    }
+    if (action === 'reinstate') {
+      optimisticPatch.status = 'active'
+      optimisticPatch.suspendedReason = null
+    }
+
+    const previous = { ...target }
+    patchUser(userId, optimisticPatch)
     setBusyId(userId)
+
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
@@ -64,8 +102,8 @@ export function UserManagement() {
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || 'Unable to update user')
       toast.success('User updated')
-      await loadUsers()
     } catch (error) {
+      patchUser(userId, previous)
       toast.error(error instanceof Error ? error.message : 'Unable to update user')
     } finally {
       setBusyId(null)
@@ -79,7 +117,7 @@ export function UserManagement() {
           <div>
             <h2 className="text-lg font-semibold">User management</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Search users, promote moderators, suspend accounts, and review contribution signals.
+              Search users, manage roles, suspend accounts, and review activity.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -92,7 +130,12 @@ export function UserManagement() {
         </div>
 
         <div className="mt-4 flex gap-2">
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search users by name or email" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search users by name or email"
+            onKeyDown={(e) => e.key === 'Enter' && loadUsers(query)}
+          />
           <Button variant="outline" onClick={() => loadUsers(query)}>
             <Search className="size-4" />
             Search
@@ -101,9 +144,10 @@ export function UserManagement() {
       </Card>
 
       {loading ? (
-        <div className="flex items-center gap-2 rounded-2xl border border-dashed p-6 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          Loading users...
+        <div className="grid gap-4 lg:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-56 rounded-[1.5rem]" />
+          ))}
         </div>
       ) : items.length === 0 ? (
         <EmptyState
@@ -117,12 +161,16 @@ export function UserManagement() {
             <Card key={item.id} className="rounded-[1.5rem] border-border/70 p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="font-semibold text-lg">{item.name}</h3>
+                  <h3 className="text-lg font-semibold">{item.name}</h3>
                   <p className="text-sm text-muted-foreground">{item.email}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant={item.role === 'admin' ? 'default' : 'secondary'}>{item.role}</Badge>
-                  <Badge variant={item.status === 'active' ? 'secondary' : 'destructive'}>{item.status}</Badge>
+                  <Badge variant={item.role === 'admin' ? 'default' : 'secondary'}>
+                    {item.role}
+                  </Badge>
+                  <Badge variant={item.status === 'active' ? 'secondary' : 'destructive'}>
+                    {item.status}
+                  </Badge>
                 </div>
               </div>
 
@@ -145,7 +193,9 @@ export function UserManagement() {
 
               <div className="mt-3 text-xs text-muted-foreground">
                 Institution: {item.institutionId ?? 'Unassigned'}
-                {item.lastActiveAt ? ` · Last active ${new Date(item.lastActiveAt).toLocaleDateString()}` : ''}
+                {item.lastActiveAt
+                  ? ` · Last active ${new Date(item.lastActiveAt).toLocaleDateString()}`
+                  : ''}
               </div>
 
               {item.status === 'suspended' && item.suspendedReason ? (
@@ -155,25 +205,67 @@ export function UserManagement() {
               ) : null}
 
               <div className="mt-4 flex flex-wrap gap-2">
-                {item.role === 'moderator' ? (
-                  <Button variant="outline" size="sm" onClick={() => handleAction(item.id, 'removeModerator')} disabled={busyId === item.id}>
-                    <ShieldOff className="size-4" />
-                    Remove moderator
+                {item.role === 'admin' ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAction(item.id, 'removeAdmin')}
+                    disabled={busyId === item.id}
+                  >
+                    <Crown className="size-4" />
+                    Remove admin
                   </Button>
                 ) : (
-                  <Button variant="outline" size="sm" onClick={() => handleAction(item.id, 'promoteModerator')} disabled={busyId === item.id}>
-                    <Shield className="size-4" />
-                    Promote moderator
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAction(item.id, 'promoteAdmin')}
+                    disabled={busyId === item.id}
+                  >
+                    <Crown className="size-4" />
+                    Promote admin
                   </Button>
                 )}
 
+                {item.role === 'moderator' ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAction(item.id, 'removeModerator')}
+                    disabled={busyId === item.id}
+                  >
+                    <ShieldOff className="size-4" />
+                    Remove moderator
+                  </Button>
+                ) : item.role !== 'admin' ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAction(item.id, 'promoteModerator')}
+                    disabled={busyId === item.id}
+                  >
+                    <Shield className="size-4" />
+                    Promote moderator
+                  </Button>
+                ) : null}
+
                 {item.status === 'active' ? (
-                  <Button variant="destructive" size="sm" onClick={() => handleAction(item.id, 'suspend')} disabled={busyId === item.id}>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleAction(item.id, 'suspend')}
+                    disabled={busyId === item.id}
+                  >
                     <UserX className="size-4" />
                     Suspend
                   </Button>
                 ) : (
-                  <Button variant="secondary" size="sm" onClick={() => handleAction(item.id, 'reinstate')} disabled={busyId === item.id}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleAction(item.id, 'reinstate')}
+                    disabled={busyId === item.id}
+                  >
                     <UserCheck className="size-4" />
                     Reinstate
                   </Button>

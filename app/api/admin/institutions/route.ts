@@ -7,7 +7,9 @@ import { recordAuditLog } from '@/lib/admin-audit'
 export async function GET(req: Request) {
   const currentUser = await getRequestUser(req.headers)
   if (!currentUser) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  if (currentUser.role !== 'admin') return Response.json({ error: 'Forbidden' }, { status: 403 })
+  if (!['admin', 'moderator'].includes(currentUser.role)) {
+  return Response.json({ error: 'Forbidden' }, { status: 403 })
+}
 
   const url = new URL(req.url)
   const query = url.searchParams.get('q')?.trim()
@@ -66,7 +68,9 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const currentUser = await getRequestUser(req.headers)
   if (!currentUser) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  if (currentUser.role !== 'admin') return Response.json({ error: 'Forbidden' }, { status: 403 })
+  if (!['admin', 'moderator'].includes(currentUser.role)) {
+  return Response.json({ error: 'Forbidden' }, { status: 403 })
+}
 
   const body = await req.json().catch(() => ({}))
   const name = String(body.name ?? '').trim()

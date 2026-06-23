@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth'
+import { isAdminEmail } from '@/lib/admin-emails'
 import { pool } from '@/lib/db'
 
 export const auth = betterAuth({
@@ -58,4 +59,18 @@ export const auth = betterAuth({
         },
       }
     : {}),
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (createdUser) => {
+          const email = createdUser.email?.toLowerCase()
+          if (!email || !isAdminEmail(email)) return
+          await pool.query('UPDATE "user" SET role = $1, "updatedAt" = NOW() WHERE id = $2', [
+            'admin',
+            createdUser.id,
+          ])
+        },
+      },
+    },
+  },
 })

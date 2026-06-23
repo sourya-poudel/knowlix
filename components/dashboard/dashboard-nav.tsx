@@ -11,6 +11,7 @@ import {
   MessageSquarePlus,
   Search,
   Shield,
+  Settings2,
   User,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -70,6 +71,12 @@ export function DashboardNav({
                 {item.label}
               </Button>
             ))}
+            {role === 'admin' ? (
+              <Button variant="ghost" size="sm" render={<Link href="/admin" />}>
+                <Settings2 className="size-4" />
+                Admin
+              </Button>
+            ) : null}
             {role === 'moderator' || role === 'admin' ? (
               <Button variant="ghost" size="sm" render={<Link href="/moderator" />}>
                 <Shield className="size-4" />
